@@ -1,0 +1,106 @@
+############################################
+# 1) Secrets / Config
+############################################
+# Spring Boot config
+application*.yml
+application*.yaml
+!application.example.yml
+!application.example.yaml
+
+# .env (Vite/Node/Spring 등)
+.env
+.env.*
+!.env.example
+
+# Keystore / certificates
+*.jks
+*.p12
+*.pfx
+*.pem
+*.key
+*.crt
+
+# Logs
+*.log
+logs/
+log/
+
+############################################
+# 2) Java / Gradle / Maven
+############################################
+# Gradle
+.gradle/
+build/
+out/
+
+# IntelliJ sometimes uses these
+*.iml
+
+############################################
+# 3) IntelliJ IDEA
+############################################
+.idea/
+*.iws
+*.ipr
+*.iml
+
+############################################
+# 4) VS Code
+############################################
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+############################################
+# 5) Node / Vue / Vite
+############################################
+node_modules/
+dist/
+dist-ssr/
+.vite/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Optional: if you want ONE lockfile in repo, keep only your team's choice:
+# !package-lock.json   (npm 고정)
+# !yarn.lock           (yarn 고정)
+# !pnpm-lock.yaml      (pnpm 고정)
+
+############################################
+# 6) OS (Mac / Windows / Linux)
+############################################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+
+############################################
+# 7) Misc / temp
+############################################
+*.tmp
+*.swp
+*.swo
+*.bak
+*.orig
