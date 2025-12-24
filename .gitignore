@@ -54,21 +54,27 @@ out/
 !.vscode/tasks.json
 
 ############################################
-# 5) Node / Vue / Vite
+# 5) Node / Vue / Vite (npm)
 ############################################
 node_modules/
 dist/
 dist-ssr/
 .vite/
 .eslintcache
+
+# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
+*.log
 
+# local env (do not commit secrets)
+.env.local
+.env.*.local
+
+# optional: test/coverage outputs
+coverage/
 # Optional: if you want ONE lockfile in repo, keep only your team's choice:
 # !package-lock.json   (npm 고정)
 # !yarn.lock           (yarn 고정)
