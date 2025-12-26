@@ -31,7 +31,6 @@ public class JwtTokenProvider {
         secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // access token 생성 메소드
     public String createToken(Long userId, String loginId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpiration);
@@ -44,7 +43,6 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // refresh token 생성 메소드
     public String createRefreshToken(Long userId, String loginId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtRefreshExpiration);

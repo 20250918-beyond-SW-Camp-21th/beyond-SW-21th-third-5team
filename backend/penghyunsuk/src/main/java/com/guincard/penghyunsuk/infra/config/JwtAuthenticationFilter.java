@@ -33,7 +33,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
             String loginId = jwtTokenProvider.getLoginIdFromJWT(token);
 
-            // CustomUserDetailsService를 통해 사용자 정보 로드
             UserDetails userDetails = userDetailsService.loadUserByUsername(loginId);
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
@@ -44,16 +43,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
-        /*
-         * if문을 통과했다면 SecurityContextHolder의 Authentication이 설정된 상태이고,
-         * 통과하지 못했다면 해당 값이 비어있는 상태이다. 이어지는 필터에서 인증 성공/실패가 가려진다.
-         */
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * Authorization 헤더에서 Bearer 토큰 추출
-     */
     private String getJwtFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
