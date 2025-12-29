@@ -1,5 +1,7 @@
 package com.guincard.penghyunsuk.infra.util;
 
+import com.guincard.penghyunsuk.core.support.error.CoreException;
+import com.guincard.penghyunsuk.core.support.error.ErrorCode;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -63,16 +65,11 @@ public class JwtTokenProvider {
         try {
             Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token);
             return true;
-        } catch (SecurityException | MalformedJwtException e) {
-            throw new BadCredentialsException("Invalid JWT Token", e);
         } catch (ExpiredJwtException e) {
-            throw new BadCredentialsException("Expired JWT Token", e);
-        } catch (UnsupportedJwtException e) {
-            throw new BadCredentialsException("Unsupported JWT Token", e);
-        } catch (IllegalArgumentException e) {
-            throw new BadCredentialsException("JWT Token claims empty", e);
+            throw new CoreException(ErrorCode.SESSION_EXPIRED);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new CoreException(ErrorCode.UNAUTHORIZED);
         }
-
     }
 
     public String getLoginIdFromJWT(String token) {
