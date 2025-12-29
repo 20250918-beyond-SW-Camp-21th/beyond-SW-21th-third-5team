@@ -1,5 +1,7 @@
 package com.guincard.penghyunsuk.core.common.method;
 
+import com.guincard.penghyunsuk.core.common.dto.GridDTO;
+
 public class KmaGridConverter {
     private KmaGridConverter() {}
 
@@ -15,7 +17,7 @@ public class KmaGridConverter {
 
     private static final double DEGRAD = Math.PI / 180.0;
 
-    public static GridXY toGrid(double lat, double lon) {
+    public static GridDTO toGrid(double lat, double lon) {
         // LCC (Lambert Conformal Conic)
         double re = RE / GRID;
         double slat1 = SLAT1 * DEGRAD;
@@ -40,11 +42,9 @@ public class KmaGridConverter {
         if (theta < -Math.PI) theta += 2.0 * Math.PI;
         theta *= sn;
 
-        int x = (int) Math.floor(ra * Math.sin(theta) + XO + 0.5);
-        int y = (int) Math.floor(ro - ra * Math.cos(theta) + YO + 0.5);
+        int nx = (int) Math.floor(ra * Math.sin(theta) + XO + 0.5);
+        int ny = (int) Math.floor(ro - ra * Math.cos(theta) + YO + 0.5);
 
-        return new KmaGridConverter.GridXY(x, y);
+        return new GridDTO(nx, ny);
     }
-
-    public record GridXY(int x, int y) {}
 }

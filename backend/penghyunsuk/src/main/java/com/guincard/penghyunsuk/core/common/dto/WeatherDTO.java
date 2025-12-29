@@ -1,11 +1,11 @@
-package com.guincard.penghyunsuk.core.common.entity;
+package com.guincard.penghyunsuk.core.common.dto;
 
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class WeatherSht {
+public class WeatherDTO {
 
     private String POP;
     private String PTY;
