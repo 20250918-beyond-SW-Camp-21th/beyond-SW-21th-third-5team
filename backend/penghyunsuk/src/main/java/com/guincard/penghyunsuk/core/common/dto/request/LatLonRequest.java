@@ -1,4 +1,4 @@
-package com.guincard.penghyunsuk.common.dto.request;
+package com.guincard.penghyunsuk.core.common.dto.request;
 
 public class LatLonRequest {
     private double lat;

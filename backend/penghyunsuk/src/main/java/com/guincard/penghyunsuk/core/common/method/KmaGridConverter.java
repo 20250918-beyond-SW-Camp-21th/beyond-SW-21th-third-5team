@@ -1,4 +1,4 @@
-package com.guincard.penghyunsuk.common.method;
+package com.guincard.penghyunsuk.core.common.method;
 
 public class KmaGridConverter {
     private KmaGridConverter() {}

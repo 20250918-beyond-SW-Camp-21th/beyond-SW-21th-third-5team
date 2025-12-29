@@ -1,6 +1,6 @@
-package com.guincard.penghyunsuk.common.repository;
+package com.guincard.penghyunsuk.core.common.repository;
 
-import com.guincard.penghyunsuk.common.entity.Weather;
+import com.guincard.penghyunsuk.core.common.entity.Weather;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;

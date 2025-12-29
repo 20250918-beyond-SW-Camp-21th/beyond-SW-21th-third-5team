@@ -1,4 +1,4 @@
-package com.guincard.penghyunsuk.common.entity;
+package com.guincard.penghyunsuk.core.common.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;

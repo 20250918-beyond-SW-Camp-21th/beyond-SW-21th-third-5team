@@ -1,4 +1,4 @@
-package com.guincard.penghyunsuk.common.dto.response;
+package com.guincard.penghyunsuk.core.common.dto.response;
 
 public class GridResponse {
     double lat;
