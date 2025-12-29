@@ -10,12 +10,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class WeatherFacadeService {
 
-    private final WeatherService weatherService; // (이미 만들어둔) 기상청 호출 서비스
+    private final WeatherService weatherService;
 
-    public JsonNode getShortTermForecastByLatLon(double lat, double lon, String baseDate, String baseTime) {
+    public JsonNode getForecastByLatLon(double lat, double lon, String baseDate, String baseTime) {
+        // 위경도 -> 격자좌표
         GridDTO grid = KmaGridConverter.toGrid(lat, lon);
 
-        // 기상청 단기예보는 nx, ny(격자 X/Y)를 요구 :contentReference[oaicite:1]{index=1}
+        // 격자좌표로 변환한 값으로 예보 조회
         return weatherService.getForecast(grid.nx(), grid.ny(), baseDate, baseTime);
     }
 }

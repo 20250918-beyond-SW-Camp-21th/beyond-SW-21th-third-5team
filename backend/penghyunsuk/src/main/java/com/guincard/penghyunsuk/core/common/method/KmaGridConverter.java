@@ -18,7 +18,6 @@ public class KmaGridConverter {
     private static final double DEGRAD = Math.PI / 180.0;
 
     public static GridDTO toGrid(double lat, double lon) {
-        // LCC (Lambert Conformal Conic)
         double re = RE / GRID;
         double slat1 = SLAT1 * DEGRAD;
         double slat2 = SLAT2 * DEGRAD;

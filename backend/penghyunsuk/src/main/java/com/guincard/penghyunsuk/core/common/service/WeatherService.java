@@ -137,5 +137,6 @@ public class WeatherService {
         return new BaseDateTime(resolvedDate, resolvedTime);
     }
 
+    // 발표 날짜 + 시간을 묶어서 처리하기 위해.
     private record BaseDateTime(String baseDate, String baseTime) {}
 }
