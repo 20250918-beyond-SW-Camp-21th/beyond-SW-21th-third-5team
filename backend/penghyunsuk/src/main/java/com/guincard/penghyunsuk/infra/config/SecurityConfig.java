@@ -53,7 +53,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login", "/api/auth/refresh").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/weather/**").permitAll()
-                                .requestMatchers(HttpMethod.POST, "api/auth/logout").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                                 .anyRequest().authenticated()
                 )
 
