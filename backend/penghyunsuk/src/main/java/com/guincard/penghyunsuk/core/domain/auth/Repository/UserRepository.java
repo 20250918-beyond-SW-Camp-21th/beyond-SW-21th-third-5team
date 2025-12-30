@@ -1,6 +1,6 @@
-package com.guincard.penghyunsuk.core.domain.auth;
+package com.guincard.penghyunsuk.core.domain.auth.Repository;
 
-import com.guincard.penghyunsuk.core.domain.auth.User;
+import com.guincard.penghyunsuk.core.domain.auth.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

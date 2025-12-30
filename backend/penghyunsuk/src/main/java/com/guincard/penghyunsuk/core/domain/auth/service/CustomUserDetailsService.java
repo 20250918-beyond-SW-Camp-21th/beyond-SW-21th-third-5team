@@ -1,7 +1,7 @@
-package com.guincard.penghyunsuk.core.domain.auth;
+package com.guincard.penghyunsuk.core.domain.auth.service;
 
-import com.guincard.penghyunsuk.core.domain.auth.User;
-import com.guincard.penghyunsuk.core.domain.auth.UserRepository;
+import com.guincard.penghyunsuk.core.domain.auth.entity.User;
+import com.guincard.penghyunsuk.core.domain.auth.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -24,7 +24,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getLoginId())
                 .password(user.getPassword())
-                .authorities(Collections.emptyList())  // 권한은 나중에 추가 가능
+                .authorities(Collections.emptyList())  // 권한 없음 (일반 사용자만)
                 .build();
     }
 }

@@ -1,4 +1,4 @@
-package com.guincard.penghyunsuk.core.domain.auth;
+package com.guincard.penghyunsuk.core.domain.auth.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;

@@ -1,7 +1,7 @@
 package com.guincard.penghyunsuk.infra.config;
 
-import com.project.core.support.handler.exception.RestAccessDeniedHandler;
-import com.project.core.support.handler.exception.RestAuthenticationEntryPoint;
+import com.guincard.penghyunsuk.core.support.error.RestAccessDeniedHandler;
+import com.guincard.penghyunsuk.core.support.error.RestAuthenticationEntryPoint;
 import com.guincard.penghyunsuk.infra.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -27,17 +27,11 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
 
-    /**
-     * 비밀번호 암호화 Bean
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Spring Security 설정
-     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -57,8 +51,9 @@ public class SecurityConfig {
 
                 // 요청 권한 설정
                 .authorizeHttpRequests(auth ->
-                        auth.requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll()
+                        auth.requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login", "/api/auth/refresh").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/weather/**").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                                 .anyRequest().authenticated()
                 )
 
