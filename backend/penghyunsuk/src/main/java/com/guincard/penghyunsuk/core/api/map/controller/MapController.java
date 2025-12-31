@@ -22,6 +22,28 @@ public class MapController {
 
     private final WeatherFacadeService weatherFacadeService;
 
+
+    /*
+     * 17개 도시 날씨 정보 한번에
+     * */
+    @GetMapping("/sido")
+    public ResponseEntity<Map<String, JsonNode>> getWeatherForAllSido(
+            @RequestParam(required = false) String baseDate,
+            @RequestParam(required = false) String baseTime
+    ) {
+        Map<String, JsonNode> result = new LinkedHashMap<>();
+        for (Sido sido : Sido.values()) {
+            JsonNode items = weatherFacadeService.getForecastByLatLon(
+                    sido.getlat(),
+                    sido.getlon(),
+                    baseDate,
+                    baseTime
+            );
+            result.put(sido.getdisplayname(), items);
+        }
+        return ResponseEntity.ok(result);
+    }
+
     /*
      * 특정 도시 날씨 정보
      */
@@ -39,27 +61,6 @@ public class MapController {
                 baseTime
         );
         return ResponseEntity.ok(items);
-    }
-
-    /*
-    * 17개 도시 날씨 정보 한번에
-    * */
-    @GetMapping("/sido")
-    public ResponseEntity<Map<String, JsonNode>> getWeatherForAllSido(
-            @RequestParam(required = false) String baseDate,
-            @RequestParam(required = false) String baseTime
-    ) {
-        Map<String, JsonNode> result = new LinkedHashMap<>();
-        for (Sido sido : Sido.values()) {
-            JsonNode items = weatherFacadeService.getForecastByLatLon(
-                    sido.getlat(),
-                    sido.getlon(),
-                    baseDate,
-                    baseTime
-            );
-            result.put(sido.getdisplayname(), items);
-        }
-        return ResponseEntity.ok(result);
     }
 
     private Sido resolveSido(String sido) {
