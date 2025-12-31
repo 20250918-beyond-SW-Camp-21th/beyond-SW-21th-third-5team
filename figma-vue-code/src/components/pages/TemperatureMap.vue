@@ -5,7 +5,7 @@
         <h3 class="text-[#1F2A37] mb-6">대한민국 기온 지도</h3>
         <div class="relative w-full h-[600px] bg-gradient-to-br from-[#F0F8FF] to-[#E6F3FF] rounded-3xl overflow-hidden">
           <img
-            src="https://images.unsplash.com/photo-1733363514919-53b042cb3c64?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
+            :src="koreaMap"
             alt="대한민국 지도"
             class="w-full h-full object-contain opacity-20"
           />
@@ -136,6 +136,7 @@
 <script setup lang="ts">
 import { Droplets, MapPin, Wind } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import koreaMap from '../../assets/images/korea-map.png';
 
 type TempMode = 'current' | 'feels' | 'high' | 'low';
 
