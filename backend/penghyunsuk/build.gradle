@@ -28,6 +28,9 @@ dependencies {
     // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
     // Spring Boot Security
     implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -44,10 +47,21 @@ dependencies {
     // MariaDB
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 
+    // Email
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Email
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // API - JSON, webflux
+    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
 }
 
 tasks.named('test') {

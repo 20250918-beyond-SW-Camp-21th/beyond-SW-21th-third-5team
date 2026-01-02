@@ -16,9 +16,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * 비즈니스 로직 예외 처리
-     */
     @ExceptionHandler(CoreException.class)
     protected ResponseEntity<ApiResult<Void>> handleBusinessException(CoreException e) {
         log.warn("BusinessException: {}", e.getMessage());
@@ -28,9 +25,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResult.error(errorCode.getCode(), e.getMessage()));
     }
 
-    /**
-     * @Valid 유효성 검증 실패
-     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected ResponseEntity<ApiResult<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         log.warn("MethodArgumentNotValidException: {}", e.getMessage());
@@ -40,9 +34,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResult.error(ErrorCode.INVALID_INPUT_VALUE.getCode(), message));
     }
 
-    /**
-     * @ModelAttribute 바인딩 실패
-     */
     @ExceptionHandler(BindException.class)
     protected ResponseEntity<ApiResult<Void>> handleBindException(BindException e) {
         log.warn("BindException: {}", e.getMessage());
@@ -52,9 +43,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResult.error(ErrorCode.INVALID_INPUT_VALUE.getCode(), message));
     }
 
-    /**
-     * RequestParam 타입 불일치
-     */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     protected ResponseEntity<ApiResult<Void>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
         log.warn("MethodArgumentTypeMismatchException: {}", e.getMessage());
@@ -63,9 +51,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResult.error(ErrorCode.INVALID_TYPE_VALUE.getCode(), ErrorCode.INVALID_TYPE_VALUE.getMessage()));
     }
 
-    /**
-     * RequestParam 누락
-     */
     @ExceptionHandler(MissingServletRequestParameterException.class)
     protected ResponseEntity<ApiResult<Void>> handleMissingServletRequestParameterException(MissingServletRequestParameterException e) {
         log.warn("MissingServletRequestParameterException: {}", e.getMessage());
@@ -74,9 +59,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResult.error(ErrorCode.MISSING_REQUEST_PARAMETER.getCode(), ErrorCode.MISSING_REQUEST_PARAMETER.getMessage()));
     }
 
-    /**
-     * 지원하지 않는 HTTP 메서드
-     */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     protected ResponseEntity<ApiResult<Void>> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
         log.warn("HttpRequestMethodNotSupportedException: {}", e.getMessage());
@@ -85,9 +67,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResult.error(ErrorCode.METHOD_NOT_ALLOWED.getCode(), ErrorCode.METHOD_NOT_ALLOWED.getMessage()));
     }
 
-    /**
-     * 그 외 모든 예외
-     */
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<ApiResult<Void>> handleException(Exception e) {
         log.error("Exception: ", e);

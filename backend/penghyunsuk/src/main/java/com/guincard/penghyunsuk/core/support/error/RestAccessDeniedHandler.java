@@ -13,10 +13,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
-/**
- * 인가 실패 시 처리 (403 Forbidden) - 현재는 사용 안 함
- * 관리자 권한 등이 추가되면 활성화
- */
 @Component
 @RequiredArgsConstructor
 public class RestAccessDeniedHandler implements AccessDeniedHandler {
