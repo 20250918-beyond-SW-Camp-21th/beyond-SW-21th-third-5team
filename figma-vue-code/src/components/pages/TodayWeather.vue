@@ -3,10 +3,10 @@
     <div class="grid grid-cols-2 gap-6 mb-8">
       <HeroCard :hero-video-src="heroVideoSrc" />
       <WeatherSummaryCard
-        :weather-items="weatherItems"
-        :is-loading="isLoading"
-        :error="weatherError"
-        :location-label="locationLabel"
+          :weather-items="weatherItems"
+          :is-loading="isLoading"
+          :error="weatherError"
+          :location-label="locationLabel"
       />
     </div>
 
