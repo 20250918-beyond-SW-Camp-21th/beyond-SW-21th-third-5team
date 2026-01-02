@@ -25,7 +25,7 @@
 
     <div class="relative z-10 mt-auto">
       <div class="bg-white rounded-3xl px-6 py-4 shadow-lg inline-block max-w-md relative">
-        <p class="text-[#1F2A37] text-lg">오늘 번개가 쳐요! 우산 챙겨요! ⚡</p>
+        <p class="text-[#1F2A37] text-lg">{{ heroMessage }}</p>
         <div class="absolute -top-2 left-12 w-4 h-4 bg-white transform rotate-45" />
       </div>
     </div>
@@ -33,7 +33,28 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Zap } from 'lucide-vue-next';
 
-defineProps<{ heroVideoSrc: string }>();
+const props = defineProps<{
+  heroVideoSrc: string;
+  weatherType?: string;
+}>();
+
+const heroMessage = computed(() => {
+  switch (props.weatherType) {
+    case 'sunny':
+      return '햇볕은 쨍쨍 모래알은 반짝~';
+    case 'cloud':
+      return '날씨 흐림 예상!!';
+    case 'rain':
+      return '오늘은 비가 와요! 우산 필수!';
+    case 'snow':
+      return '귀여운 펭귄 눈사람 만드는건 어때요?';
+    case 'thunder':
+      return '우르르 쾅쾅! 번개가 친대요';
+    default:
+      return '오늘도 행복한 하루 보내세요!';
+  }
+});
 </script>

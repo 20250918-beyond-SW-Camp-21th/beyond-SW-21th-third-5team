@@ -1,12 +1,16 @@
-<template>
+﻿<template>
   <main class="max-w-[1440px] mx-auto px-20 py-8">
     <div class="grid grid-cols-2 gap-6 mb-8">
-      <HeroCard :hero-video-src="heroVideoSrc" />
-      <WeatherSummaryCard
-        :weather-items="weatherItems"
-        :is-loading="isLoading"
-        :error="weatherError"
-        :location-label="locationLabel"
+      <HeroCard :hero-video-src="heroVideoSrc" :weather-type="weatherType" />
+            <WeatherSummaryCard
+        :location-label="locationDisplay"
+        :date-label="dateLabel"
+        :status-message="statusMessage"
+        :temperature-display="temperatureDisplay"
+        :weather-summary="weatherSummary"
+        :weather-stats="weatherStats"
+        :outfit-items="outfitItems"
+        :outfit-description="outfitDescription"
       />
     </div>
 
@@ -28,6 +32,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import axios from 'axios';
+import { CloudRain, Droplets, Glasses, ShoppingBag, Wind, Coffee } from 'lucide-vue-next';
 import AlertBanner from '../AlertBanner.vue';
 import HeroCard from '../HeroCard.vue';
 import HourlyForecastCard from '../HourlyForecastCard.vue';
@@ -47,12 +53,24 @@ type WeatherItem = {
   fcstTime?: string;
 };
 
+type WeatherStat = {
+  icon: unknown;
+  label: string;
+  value: string;
+};
+
+type OutfitItem = {
+  icon: unknown;
+  label: string;
+};
+
 const weatherItems = ref<WeatherItem[] | null>(null);
 const weatherError = ref<string | null>(null);
 const isLoading = ref(false);
-const locationLabel = ref('현재 위치');
+const locationLabel = ref("현재 위치");
 
 const closestForecast = computed(() => getClosestForecast(weatherItems.value ?? []));
+const weatherType = computed(() => mapWeatherKey());
 
 const heroVideoSrc = computed(() => {
   const tempValue = findValue(['TMP', 'T1H']);
@@ -61,16 +79,119 @@ const heroVideoSrc = computed(() => {
     return fallbackHeroVideoSrc;
   }
   const tempKey = mapTemperatureKey(tempC);
-  const weatherKey = mapWeatherKey();
-  const videoKey = `${tempKey}_${weatherKey}`;
+  const videoKey = `${tempKey}_${weatherType.value}`;
   const path = `../../assets/videos/${videoKey}.mp4`;
   return (heroVideos[path] as string | undefined) ?? fallbackHeroVideoSrc;
 });
 
+const locationDisplay = computed(() => locationLabel.value || "--");
+const dateLabel = computed(() => formatKoreanDate(new Date()));
+
+const temperatureDisplay = computed(() => {
+  const value = findValue(['TMP', 'T1H']);
+  return value ? `${value}C` : "--C";
+});
+
+const weatherSummary = computed(() => {
+  const skyValue = findValue(['SKY']);
+  if (!skyValue) {
+    return "--";
+  }
+  const label = mapWeatherLabel(weatherType.value);
+  return "날씨: " + label;
+});
+
+const weatherStats = computed<WeatherStat[]>(() => {
+  const windValue = findValue(['WSD']);
+  const humidityValue = findValue(['REH']);
+  const precipValue = findValue(['POP']);
+
+  return [
+    { icon: Wind, label: "바람", value: windValue ? `${windValue}m/s` : "--" },
+    { icon: Droplets, label: "습도", value: humidityValue ? `${humidityValue}%` : "--" },
+    { icon: CloudRain, label: "강수확률", value: precipValue ? `${precipValue}%` : "--" },
+  ];
+});
+
+const statusMessage = computed(() => {
+  if (weatherError.value) {
+    return "날씨 가져오기 실패: " + weatherError.value;
+  }
+  if (isLoading.value) {
+    return "현재 위치의 날씨를 불러오는 중입니다.";
+  }
+  if (weatherItems.value?.length) {
+    return "현재 위치 날씨 수신 (" + weatherItems.value.length + "개)";
+  }
+  return "";
+});
+
+const outfitRecommendation = computed(() => {
+  const tempValue = findValue(['TMP', 'T1H']);
+  const tempC = parseNumber(tempValue);
+  const type = weatherType.value;
+
+  if (tempC === null) {
+    return {
+      description: "--",
+      items: [] as OutfitItem[],
+    };
+  }
+
+  let description = "";
+  let items: OutfitItem[] = [];
+
+  if (tempC >= 23) {
+    description = "민소매, 반팔, 반바지, 린넨";
+    items = [
+      { icon: Glasses, label: "자외선 차단" },
+      { icon: ShoppingBag, label: "가벼운 옷차림" },
+      { icon: Coffee, label: "시원한 음료" },
+    ];
+  } else if (tempC >= 17) {
+    description = "반팔, 얇은 셔츠, 면바지";
+    items = [
+      { icon: ShoppingBag, label: "얇은 겉옷" },
+      { icon: Glasses, label: "선글라스" },
+      { icon: Coffee, label: "가벼운 음료" },
+    ];
+  } else if (tempC >= 9) {
+    description = "가디건, 니트, 긴바지";
+    items = [
+      { icon: ShoppingBag, label: "가디건" },
+      { icon: Coffee, label: "따뜻한 음료" },
+      { icon: Glasses, label: "보온용품" },
+    ];
+  } else if (tempC >= 5) {
+    description = "코트, 니트, 기모";
+    items = [
+      { icon: ShoppingBag, label: "코트" },
+      { icon: Coffee, label: "따뜻한 음료" },
+      { icon: Glasses, label: "보온용품" },
+    ];
+  } else {
+    description = "패딩, 두꺼운 코트, 목도리";
+    items = [
+      { icon: ShoppingBag, label: "패딩" },
+      { icon: Coffee, label: "따뜻한 음료" },
+      { icon: Glasses, label: "보온용품" },
+    ];
+  }
+
+  if (type === "rain" || type === "thunder") {
+    items = [...items.slice(0, 2), { icon: CloudRain, label: "우산" }];
+  }
+
+  return { description, items };
+});
+
+const outfitItems = computed(() => outfitRecommendation.value.items);
+const outfitDescription = computed(() => outfitRecommendation.value.description);
+
 function getCurrentPosition(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (!('geolocation' in navigator)) {
-      reject(new Error('브라우저에서 위치 정보를 지원하지 않습니다.'));
+      reject(new Error("브라우저에서 위치 정보를 지원하지 않습니다."));
       return;
     }
     navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -90,15 +211,18 @@ async function loadWeatherByLocation() {
     const lat = position.coords.latitude;
     const lon = position.coords.longitude;
 
-    const res = await fetch(`/api/weather/by-location?lat=${lat}&lon=${lon}`);
-    if (!res.ok) {
-      throw new Error(`날씨 API 요청 실패 (${res.status})`);
-    }
-
-    const data = await res.json();
+    const { data } = await axios.get('/api/weather/by-location', {
+      params: { lat, lon },
+    });
     weatherItems.value = Array.isArray(data) ? data : data?.items ?? [];
   } catch (error) {
-    weatherError.value = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const message = error.response?.data?.message;
+      weatherError.value = status ? `날씨 API 요청 실패 (${status})` : message ?? error.message;
+    } else {
+      weatherError.value = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
+    }
   } finally {
     isLoading.value = false;
   }
@@ -114,7 +238,7 @@ function findValue(categories: string[]) {
     const match = items.find(
       (item) =>
         item &&
-        categories.includes(item.category ?? '') &&
+        categories.includes(item.category ?? "") &&
         item.fcstDate === target.fcstDate &&
         item.fcstTime === target.fcstTime,
     );
@@ -122,45 +246,73 @@ function findValue(categories: string[]) {
       return match.fcstValue;
     }
   }
-  const fallback = items.find((item) => item && categories.includes(item.category ?? ''));
+  const fallback = items.find((item) => item && categories.includes(item.category ?? ""));
   return fallback?.fcstValue ?? null;
 }
 
 function mapWeatherKey() {
   const lightning = parseNumber(findValue(['LGT']));
   if (lightning !== null && lightning > 0) {
-    return 'thunder';
+    return "thunder";
   }
 
   const precipitationType = parseNumber(findValue(['PTY']));
   if (precipitationType !== null && precipitationType > 0) {
     if (precipitationType === 3) {
-      return 'snow';
+      return "snow";
     }
-    return 'rain';
+    return "rain";
   }
 
   const sky = findValue(['SKY']);
-  if (sky === '1') {
-    return 'sunny';
+  if (sky === "1") {
+    return "sunny";
   }
-  return 'cloud';
+  if (sky === "3" || sky === "4" || sky === "2") {
+    return "cloud";
+  }
+  return "cloud";
+}
+
+function mapWeatherLabel(type: string) {
+  switch (type) {
+    case "sunny":
+      return "맑음";
+    case "cloud":
+      return "흐림";
+    case "rain":
+      return "비";
+    case "snow":
+      return "눈";
+    case "thunder":
+      return "천둥번개";
+    default:
+      return "--";
+  }
 }
 
 function mapTemperatureKey(tempC: number) {
   if (tempC >= 23) {
-    return '23';
+    return "23";
   }
   if (tempC >= 17) {
-    return '22';
+    return "22";
   }
   if (tempC >= 9) {
-    return '16';
+    return "16";
   }
   if (tempC >= 5) {
-    return '8';
+    return "8";
   }
-  return '4';
+  return "4";
+}
+
+function formatKoreanDate(date: Date) {
+  const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const weekday = weekdays[date.getDay()];
+  return `${month}월 ${day}일 (${weekday})`;
 }
 
 function parseNumber(value?: string | null) {
