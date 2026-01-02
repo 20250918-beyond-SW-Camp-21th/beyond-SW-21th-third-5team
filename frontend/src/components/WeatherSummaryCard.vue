@@ -34,17 +34,21 @@
 
       <div class="flex gap-3 mb-4">
         <div
-          v-for="(item, index) in outfitItems"
-          :key="index"
-          class="w-14 h-14 bg-gradient-to-br from-[#FFF5F8] to-[#FFE8F0] rounded-2xl flex items-center justify-center shadow-sm"
+            v-for="item in outfitItems"
+            :key="item.label"
+            class="flex flex-col items-center gap-2"
         >
-          <component :is="item.icon" class="w-6 h-6 text-[#FF9BCB]" />
+          <div class="w-14 h-14 bg-gradient-to-br from-[#FFF5F8] to-[#FFE8F0] rounded-2xl flex items-center justify-center shadow-sm">
+            <component :is="item.icon" class="w-6 h-6 text-[#FF9BCB]" />
+          </div>
+          <span class="text-xs text-[#6B7280]">{{ item.label }}</span>
         </div>
       </div>
 
+
       <p class="text-[#6B7280] mb-6">{{ outfitDescription }}</p>
 
-      <button class="w-full bg-[#FF9BCB] text-white py-4 rounded-2xl hover:bg-[#FF7FB3] transition-all shadow-lg shadow-pink-200/50 font-semibold">
+      <button class="w-full bg-[#FF9BCB] text-white py-4 rounded-2xl hover:bg-[#FF7FB3] transition-all shadow-lg shadow-pink-200/50 font-semibold" @click="handleRecordClick">
         오늘 기록하기
       </button>
     </div>
@@ -54,6 +58,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { ChevronDown } from 'lucide-vue-next';
+
+const emit = defineEmits<{
+  (event: 'record'): void;
+}>();
+
+function handleRecordClick() {
+  emit('record');
+}
+
 
 type WeatherStat = {
   icon: unknown;

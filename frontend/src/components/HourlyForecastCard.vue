@@ -65,7 +65,7 @@ function mapSummaryIcon(summary?: string) {
   if (!summary) {
     return null;
   }
-  if (summary.includes('천둥')) {
+  if (summary.includes('천둥') || summary.includes('번개')) {
     return Zap;
   }
   if (summary.includes('눈')) {
@@ -74,7 +74,7 @@ function mapSummaryIcon(summary?: string) {
   if (summary.includes('비')) {
     return CloudRain;
   }
-  if (summary.includes('구름')) {
+  if (summary.includes('구름') || summary.includes('흐림')) {
     return Cloud;
   }
   if (summary.includes('맑음')) {

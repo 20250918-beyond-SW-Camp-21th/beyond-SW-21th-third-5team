@@ -1,5 +1,6 @@
 ﻿<template>
   <main class="max-w-[1440px] mx-auto px-20 py-8">
+    <!--  상단 펭귄 영상, 날씨 요약 카드  -->
     <div class="grid grid-cols-2 gap-6 mb-8">
       <HeroCard :hero-video-src="heroVideoSrc" :weather-type="weatherType" />
       <WeatherSummaryCard
@@ -14,14 +15,16 @@
       />
     </div>
 
+    <!--  시간대별 예보  -->
     <div class="mb-8">
       <HourlyForecastCard :hourly-items="hourlyItems" />
     </div>
-
+    <!--  날씨 종류 알림 멘트   -->
     <div class="mb-8">
       <AlertBanner :weather-type="weatherType"/>
     </div>
 
+    <!-- 각 페이지 미리보기 카드   -->
     <div class="grid grid-cols-3 gap-6">
       <PreviewCard type="tomorrow" />
       <PreviewCard type="week" />
@@ -33,19 +36,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import axios from 'axios';
-import { Cloud, CloudRain, CloudSnow, Droplets, Glasses, ShoppingBag, Sun, Wind, Coffee, Zap } from 'lucide-vue-next';
+import { Cloud, CloudRain, CloudSnow, Droplets, Glasses, ShoppingBag, Sun, Wind, Coffee, Zap, Shirt, Layers, ThermometerSnowflake } from 'lucide-vue-next';
 import AlertBanner from '../AlertBanner.vue';
 import HeroCard from '../HeroCard.vue';
 import HourlyForecastCard from '../HourlyForecastCard.vue';
 import PreviewCard from '../PreviewCard.vue';
 import WeatherSummaryCard from '../WeatherSummaryCard.vue';
 
+
+/* 영상 파일*/
 const heroVideos = import.meta.glob('../../assets/videos/*.mp4', {
   eager: true,
   import: 'default',
 });
 const fallbackHeroVideoSrc = new URL('../../assets/videos/basic.mp4', import.meta.url).href;
 
+
+/*기상청 api 응답 형태*/
 type WeatherItem = {
   category?: string;
   fcstValue?: string;
@@ -64,15 +71,20 @@ type OutfitItem = {
   label: string;
 };
 
+/* 날씨 화면 상태 */
 const weatherItems = ref<WeatherItem[] | null>(null);
 const hourlyItems = ref<{ time: string; temperature: string; precipitation:string; summary?: string }[]>([]);
 const weatherError = ref<string | null>(null);
 const isLoading = ref(false);
 const locationLabel = ref("현재 위치");
 
+/* 현재 시간에 가장 가까운 예보 시각 계산 */
 const closestForecast = computed(() => getClosestForecast(weatherItems.value ?? []));
+
+/*현재 날씨 타입 계산(sunny/cloud/rain/snow/thunder)*/
 const weatherType = computed(() => mapWeatherKey());
 
+/* 날씨타입+온도로 펭귄 영상 선택*/
 const heroVideoSrc = computed(() => {
   const tempValue = findValue(['TMP', 'T1H']);
   const tempC = parseNumber(tempValue);
@@ -85,6 +97,7 @@ const heroVideoSrc = computed(() => {
   return (heroVideos[path] as string | undefined) ?? fallbackHeroVideoSrc;
 });
 
+/* 요약 화면 표시값 */
 const locationDisplay = computed(() => locationLabel.value || "--");
 const dateLabel = computed(() => formatKoreanDate(new Date()));
 
@@ -127,6 +140,7 @@ const statusMessage = computed(() => {
   return "";
 });
 
+/* 옷 추천 로직 */
 const outfitRecommendation = computed(() => {
   const tempValue = findValue(['TMP', 'T1H']);
   const tempC = parseNumber(tempValue);
@@ -146,36 +160,36 @@ const outfitRecommendation = computed(() => {
     description = "민소매, 반팔, 반바지, 린넨";
     items = [
       { icon: Glasses, label: "자외선 차단" },
-      { icon: ShoppingBag, label: "가벼운 옷차림" },
+      { icon: Shirt, label: "가벼운 옷차림" },
       { icon: Coffee, label: "시원한 음료" },
     ];
   } else if (tempC >= 17) {
     description = "반팔, 얇은 셔츠, 면바지";
     items = [
-      { icon: ShoppingBag, label: "얇은 겉옷" },
+      { icon: Shirt, label: "얇은 겉옷" },
       { icon: Glasses, label: "선글라스" },
       { icon: Coffee, label: "가벼운 음료" },
     ];
   } else if (tempC >= 9) {
     description = "가디건, 니트, 긴바지";
     items = [
-      { icon: ShoppingBag, label: "가디건" },
+      { icon: Shirt, label: "가디건" },
       { icon: Coffee, label: "따뜻한 음료" },
-      { icon: Glasses, label: "보온용품" },
+        { icon: ThermometerSnowflake, label: "보온용품" },
     ];
   } else if (tempC >= 5) {
     description = "코트, 니트, 기모";
     items = [
-      { icon: ShoppingBag, label: "코트" },
+      { icon: Shirt, label: "코트" },
       { icon: Coffee, label: "따뜻한 음료" },
-      { icon: Glasses, label: "보온용품" },
+      { icon: ThermometerSnowflake, label: "보온용품" },
     ];
   } else {
     description = "패딩, 두꺼운 코트, 목도리";
     items = [
-      { icon: ShoppingBag, label: "패딩" },
+      { icon: Shirt, label: "패딩" },
       { icon: Coffee, label: "따뜻한 음료" },
-      { icon: Glasses, label: "보온용품" },
+      { icon: ThermometerSnowflake, label: "보온용품" },
     ];
   }
 
@@ -189,6 +203,7 @@ const outfitRecommendation = computed(() => {
 const outfitItems = computed(() => outfitRecommendation.value.items);
 const outfitDescription = computed(() => outfitRecommendation.value.description);
 
+/* 현재 위치 가져오기 */
 function getCurrentPosition(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (!('geolocation' in navigator)) {
@@ -203,6 +218,7 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
   });
 }
 
+/* 위치 기반 날씨 호출 */
 async function loadWeatherByLocation() {
   isLoading.value = true;
   weatherError.value = null;
@@ -230,6 +246,7 @@ async function loadWeatherByLocation() {
   }
 }
 
+/* 특정 카테고리 값 찾기 */
 function findValue(categories: string[]) {
   const items = weatherItems.value ?? [];
   if (!items.length) {
@@ -252,6 +269,7 @@ function findValue(categories: string[]) {
   return fallback?.fcstValue ?? null;
 }
 
+/* 현 시점 날씨 타입 */
 function mapWeatherKey() {
   const lightning = parseNumber(findValue(['LGT']));
   if (lightning !== null && lightning > 0) {
@@ -276,6 +294,7 @@ function mapWeatherKey() {
   return "cloud";
 }
 
+/* 날씨 타입 한글라벨 변환*/
 function mapWeatherLabel(type: string) {
   switch (type) {
     case "sunny":
@@ -294,6 +313,7 @@ function mapWeatherLabel(type: string) {
 
 }
 
+/*온도 구간 키(영상 파일명 사용)*/
 function mapTemperatureKey(tempC: number) {
   if (tempC >= 23) {
     return "23";
@@ -310,6 +330,7 @@ function mapTemperatureKey(tempC: number) {
   return "4";
 }
 
+/*날짜 형태 변환*/
 function formatKoreanDate(date: Date) {
   const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
   const month = date.getMonth() + 1;
@@ -318,7 +339,7 @@ function formatKoreanDate(date: Date) {
   return `${month}월 ${day}일 (${weekday})`;
 }
 
-
+/* 시간대별 온도 데이터 (최대 8개)*/
 function buildHourlyItems(items: WeatherItem[]) {
   if (!items.length) {
     return [] as { time: string; temperature: string; precipitation: string; summary?: string }[];
@@ -383,6 +404,7 @@ function buildHourlyItems(items: WeatherItem[]) {
   });
 }
 
+/* 특정 시간 날씨 타입 계산*/
 function mapWeatherKeyForTime(items: WeatherItem[], fcstDate: string, fcstTime: string) {
   const lightning = findValueForTime(items, ['LGT'], fcstDate, fcstTime);
   const lightningValue = parseNumber(lightning);
@@ -408,6 +430,7 @@ function mapWeatherKeyForTime(items: WeatherItem[], fcstDate: string, fcstTime: 
   return 'cloud';
 }
 
+/* 특정 시간 카테고리값 */
 function findValueForTime(items: WeatherItem[], categories: string[], fcstDate: string, fcstTime: string) {
   for (const item of items) {
     if (!item || !item.category) {
@@ -423,6 +446,7 @@ function findValueForTime(items: WeatherItem[], categories: string[], fcstDate: 
   return null;
 }
 
+/*강수량 강수없음,-- -> 0 */
 function normalizePrecipitation(value: string) {
   if (!value || value.trim() === '--') {
     return '0';
@@ -434,13 +458,7 @@ function normalizePrecipitation(value: string) {
   return cleaned;
 }
 
-function formatDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
-}
-
+/*HHmm -> HH:mm*/
 function formatHour(fcstTime?: string) {
   if (!fcstTime || fcstTime.length !== 4) {
     return '--:--';
@@ -450,6 +468,7 @@ function formatHour(fcstTime?: string) {
   return `${hour}:${minute}`;
 }
 
+/*문자열 숫자 파싱*/
 function parseNumber(value?: string | null) {
   if (!value) {
     return null;
@@ -458,6 +477,7 @@ function parseNumber(value?: string | null) {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+/* items에서 현재와 가장 가까운 시간 구하기 */
 function getClosestForecast(items: WeatherItem[]) {
   if (!items.length) {
     return null;
@@ -506,6 +526,7 @@ function getClosestForecast(items: WeatherItem[]) {
   return { fcstDate, fcstTime };
 }
 
+/** YYYYMMDD + HHmm → Date 변환 */
 function parseForecastDateTime(fcstDate?: string, fcstTime?: string) {
   if (!fcstDate || !fcstTime || fcstDate.length !== 8 || fcstTime.length !== 4) {
     return null;
