@@ -1,6 +1,7 @@
 package com.guincard.penghyunsuk.core.api.map.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.guincard.penghyunsuk.core.api.map.dto.SidoWeatherResponse;
 import com.guincard.penghyunsuk.core.common.service.WeatherFacadeService;
 import com.guincard.penghyunsuk.core.domain.map.enums.Sido;
 import com.guincard.penghyunsuk.core.support.error.CoreException;
@@ -27,11 +28,11 @@ public class MapController {
      * 17개 도시 날씨 정보 한번에
      * */
     @GetMapping("/sido")
-    public ResponseEntity<Map<String, JsonNode>> getWeatherForAllSido(
+    public ResponseEntity<Map<String, SidoWeatherResponse>> getWeatherForAllSido(
             @RequestParam(required = false) String baseDate,
             @RequestParam(required = false) String baseTime
     ) {
-        Map<String, JsonNode> result = new LinkedHashMap<>();
+        Map<String, SidoWeatherResponse> result = new LinkedHashMap<>();
         for (Sido sido : Sido.values()) {
             JsonNode items = weatherFacadeService.getForecastByLatLon(
                     sido.getlat(),
@@ -39,7 +40,7 @@ public class MapController {
                     baseDate,
                     baseTime
             );
-            result.put(sido.getdisplayname(), items);
+            result.put(sido.getdisplayname(), new SidoWeatherResponse(items, ""));
         }
         return ResponseEntity.ok(result);
     }
@@ -48,7 +49,7 @@ public class MapController {
      * 특정 도시 날씨 정보
      */
     @GetMapping("/sido/one")
-    public ResponseEntity<JsonNode> getWeatherBySido(
+    public ResponseEntity<SidoWeatherResponse> getWeatherBySido(
             @RequestParam String sido,
             @RequestParam(required = false) String baseDate,
             @RequestParam(required = false) String baseTime
@@ -60,7 +61,7 @@ public class MapController {
                 baseDate,
                 baseTime
         );
-        return ResponseEntity.ok(items);
+        return ResponseEntity.ok(new SidoWeatherResponse(items, ""));
     }
 
     private Sido resolveSido(String sido) {
