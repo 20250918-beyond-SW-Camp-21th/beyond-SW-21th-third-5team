@@ -27,6 +27,7 @@
 </template>
 
 <script setup lang="ts">
+import axios from 'axios';
 import { onMounted, ref } from 'vue';
 import AlertBanner from '../AlertBanner.vue';
 import HeroCard from '../HeroCard.vue';
@@ -69,12 +70,9 @@ async function loadWeatherByLocation() {
     const lat = position.coords.latitude;
     const lon = position.coords.longitude;
 
-    const res = await fetch(`/api/weather/by-location?lat=${lat}&lon=${lon}`);
-    if (!res.ok) {
-      throw new Error(`날씨 API 요청 실패 (${res.status})`);
-    }
-
-    const data = await res.json();
+    const { data } = await axios.get('/api/weather/by-location', {
+      params: { lat, lon },
+    });
     weatherItems.value = Array.isArray(data) ? data : data?.items ?? [];
   } catch (error) {
     weatherError.value = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
