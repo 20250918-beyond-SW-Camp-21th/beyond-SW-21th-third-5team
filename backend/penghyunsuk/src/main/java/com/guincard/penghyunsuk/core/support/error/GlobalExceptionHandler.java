@@ -25,6 +25,24 @@ public class GlobalExceptionHandler {
                 .body(ApiResult.error(errorCode.getCode(), e.getMessage()));
     }
 
+    @ExceptionHandler(UpstreamRateLimitedException.class)
+    protected ResponseEntity<ApiResult<Void>> handleUpstreamRateLimitedException(UpstreamRateLimitedException e) {
+        log.warn("UpstreamRateLimitedException: {}", e.getMessage());
+        ErrorCode errorCode = ErrorCode.UPSTREAM_RATE_LIMITED;
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(ApiResult.error(errorCode.getCode(), e.getMessage()));
+    }
+
+    @ExceptionHandler(UpstreamServiceException.class)
+    protected ResponseEntity<ApiResult<Void>> handleUpstreamServiceException(UpstreamServiceException e) {
+        log.warn("UpstreamServiceException: {}", e.getMessage());
+        ErrorCode errorCode = ErrorCode.UPSTREAM_SERVICE_UNAVAILABLE;
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(ApiResult.error(errorCode.getCode(), e.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected ResponseEntity<ApiResult<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         log.warn("MethodArgumentNotValidException: {}", e.getMessage());

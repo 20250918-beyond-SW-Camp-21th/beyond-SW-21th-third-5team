@@ -14,6 +14,8 @@ public enum ErrorCode {
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "C003", "지원하지 않는 HTTP 메서드입니다."),
     INVALID_TYPE_VALUE(HttpStatus.BAD_REQUEST, "C004", "잘못된 타입입니다."),
     MISSING_REQUEST_PARAMETER(HttpStatus.BAD_REQUEST, "C005", "필수 파라미터가 누락되었습니다."),
+    UPSTREAM_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "C006", "외부 API 호출 제한에 걸렸습니다."),
+    UPSTREAM_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "C007", "외부 API 호출에 실패했습니다."),
 
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다."),

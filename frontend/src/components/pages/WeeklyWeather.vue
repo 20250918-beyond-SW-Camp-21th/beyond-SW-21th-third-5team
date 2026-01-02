@@ -84,7 +84,7 @@
           </div>
 
           <div class="w-12 h-12 bg-gradient-to-br from-[#FFF5F8] to-[#FFE8F0] rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-            <span class="text-2xl">🐧</span>
+            <img :src="mascotSrc" alt="마스코트" class="w-8 h-8 object-contain" />
           </div>
         </div>
       </div>
