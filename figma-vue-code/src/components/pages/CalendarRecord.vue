@@ -11,34 +11,28 @@
           아직 등록한 기록이 없습니다.
         </div>
         <div v-else>
-          <div class="grid grid-cols-4 gap-4 bg-red-200">
+          <div class="recordGrid">
             <button
                 v-for="r in pageItems"
                 :key="r.id"
                 type="button"
-                class="w-full relative overflow-hidden rounded-2xl bg-gray-100 border border-gray-200"
-                style="padding-top: 100%;"
-            @click="goDetail(r.id)"
+                class="recordCard"
+                @click="goDetail(r.id)"
             >
-            <img
-                v-if="r.photoUrl"
-                :src="r.photoUrl"
-                class="absolute inset-0 w-full h-full object-cover"
-                alt="ootd"
-            />
-            <div
-                v-else
-                class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-400"
-            >
-              No Image
-            </div>
+              <img
+                  v-if="r.photoUrl"
+                  :src="r.photoUrl"
+                  class="recordImage"
+                  alt="ootd"
+              />
+              <div v-else class="recordEmpty">No Image</div>
             </button>
           </div>
 
-          <div class="mt-6 flex items-center justify-between">
+          <div class="pagination">
             <button
                 type="button"
-                class="px-3 py-2 rounded-xl border border-gray-200 bg-white font-semibold"
+                class="pageBtn"
                 :disabled="page === 1"
                 @click="page--"
             >
@@ -47,7 +41,7 @@
 
             <button
                 type="button"
-                class="px-3 py-2 rounded-xl border border-gray-200 bg-white font-semibold"
+                class="pageBtn"
                 :disabled="page === totalPages"
                 @click="page++"
             >
@@ -55,6 +49,7 @@
             </button>
           </div>
         </div>
+
 
 
       </section>
@@ -264,5 +259,47 @@ padding: 20px;
   font-weight: 800;
 }
 .pageBtn:disabled{ opacity: 0.45; cursor: not-allowed; }
+
+.recordGrid{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* ✅ 4칸 고정 */
+  gap: 16px;
+  width: 100%;
+}
+
+.recordCard{
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1; /* ✅ 정사각형 */
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+}
+
+.recordImage{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recordEmpty{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.pagination{
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
 </style>
