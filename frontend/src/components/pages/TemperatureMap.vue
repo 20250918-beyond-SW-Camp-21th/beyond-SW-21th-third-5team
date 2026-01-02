@@ -4,7 +4,6 @@
       <div class="bg-white rounded-[28px] p-8 shadow-lg shadow-blue-100/50 relative min-h-[700px]">
         <h3 class="text-[#1F2A37] mb-6">대한민국 기온 지도</h3>
         <div
-          ref="mapRef"
           class="relative w-full max-w-[720px] bg-gradient-to-br from-[#F0F8FF] to-[#E6F3FF] rounded-3xl select-none mx-auto"
           style="aspect-ratio: 2 / 3;"
         >
@@ -25,8 +24,6 @@
               class="group relative"
               :class="selectedCity === city.name ? 'z-20' : 'z-10'"
               @click="selectedCity = city.name"
-              @mousedown="startDrag(city, $event)"
-              @touchstart.prevent="startDrag(city, $event)"
             >
               <span
                 class="flex h-12 w-12 items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-110"
@@ -43,50 +40,6 @@
       </div>
 
       <div class="space-y-6">
-        <div class="bg-white rounded-[28px] p-6 shadow-lg shadow-blue-100/50">
-          <h4 class="text-[#1F2A37] mb-4">필터</h4>
-          <div class="mb-6">
-            <label class="block text-sm text-[#6B7280] mb-2">표시 온도</label>
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                v-for="mode in temperatureModes"
-                :key="mode.value"
-                type="button"
-                class="py-2 px-3 rounded-xl transition-all"
-                :class="tempMode === mode.value ? 'bg-[#6AA9FF] text-white' : 'bg-[#F6FAFF] text-[#6B7280] hover:bg-[#EAF2FF]'"
-                @click="tempMode = mode.value"
-              >
-                {{ mode.label }}
-              </button>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <label class="text-sm text-[#6B7280]">옷차림 아이콘 표시</label>
-            <button
-              type="button"
-              class="w-12 h-6 rounded-full transition-all"
-              :class="showOutfitIcons ? 'bg-[#6AA9FF]' : 'bg-[#E6EEF9]'"
-              @click="showOutfitIcons = !showOutfitIcons"
-            >
-              <span
-                class="block w-5 h-5 bg-white rounded-full shadow-sm transition-transform"
-                :class="showOutfitIcons ? 'translate-x-6' : 'translate-x-1'"
-              />
-            </button>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-[28px] p-6 shadow-lg shadow-blue-100/50">
-          <h4 class="text-[#1F2A37] mb-4">범례</h4>
-          <div class="space-y-3">
-            <div v-for="legend in legends" :key="legend.range" class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg shadow-sm" :class="legend.color" />
-              <span class="text-sm text-[#6B7280]">{{ legend.range }}</span>
-            </div>
-          </div>
-        </div>
-
         <div class="bg-gradient-to-br from-[#F0F8FF] to-[#E6F3FF] rounded-[28px] p-6 shadow-lg shadow-blue-100/50">
           <div class="flex items-start gap-3 mb-4">
             <MapPin class="w-6 h-6 text-[#6AA9FF]" />
@@ -117,6 +70,16 @@
         </div>
 
         <div class="bg-white rounded-[28px] p-6 shadow-lg shadow-blue-100/50">
+          <h4 class="text-[#1F2A37] mb-4">범례</h4>
+          <div class="space-y-3">
+            <div v-for="legend in legends" :key="legend.range" class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg shadow-sm" :class="legend.color" />
+              <span class="text-sm text-[#6B7280]">{{ legend.range }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-[28px] p-6 shadow-lg shadow-blue-100/50">
           <h4 class="text-[#1F2A37] mb-4">인기 지역 빠른 선택</h4>
           <div class="flex flex-wrap gap-2">
             <button
@@ -138,10 +101,20 @@
 
 <script setup lang="ts">
 import { Droplets, MapPin, Wind } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import koreaMap from '../../assets/images/korea-map.png';
 
-type TempMode = 'current' | 'feels' | 'high' | 'low';
+type WeatherItem = {
+  category?: string;
+  fcstValue?: string;
+};
+type SidoWeatherPayload = {
+  items?: WeatherItem[];
+  outfit?: string;
+  outfitRecommendation?: string;
+  recommendedOutfit?: string;
+  recommendation?: { outfit?: string };
+};
 
 interface City {
   name: string;
@@ -152,11 +125,8 @@ interface City {
 
 const selectedCity = ref('서울');
 const showOutfitIcons = ref(true);
-const tempMode = ref<TempMode>('current');
-const mapRef = ref<HTMLElement | null>(null);
-const draggingCity = ref<City | null>(null);
-const dragOffset = ref({ x: 0, y: 0 });
-const previousUserSelect = ref('');
+const weatherBySido = ref<Record<string, SidoWeatherPayload>>({});
+const cacheKey = 'weather-sido-cache';
 
 const cities = ref<City[]>([
   { name: '서울', temp: 18, position: { top: '15.895806520806522%', left: '30.378257722007724%' }, outfit: '가디건 + 긴바지' },
@@ -178,14 +148,7 @@ const cities = ref<City[]>([
   { name: '제주', temp: 24, position: { top: '90.51627727470013%', left: '19.318181818181817%' }, outfit: '반팔 + 반바지' },
 ]);
 
-const temperatureModes = [
-  { value: 'current' as TempMode, label: '현재' },
-  { value: 'feels' as TempMode, label: '체감' },
-  { value: 'high' as TempMode, label: '최고' },
-  { value: 'low' as TempMode, label: '최저' },
-];
-
-const popularCities = cities.value.map(city => city.name);
+const popularCities = ['서울', '경기', '대전', '부산', '제주'];
 
 const legends = [
   { range: '0~5°C', color: 'bg-blue-400' },
@@ -202,65 +165,9 @@ if (import.meta.env.DEV) {
   (window as Window & { __temperatureMapCities?: City[] }).__temperatureMapCities = cities.value;
 }
 
-function getClientPoint(event: MouseEvent | TouchEvent) {
-  if ('touches' in event && event.touches.length > 0) {
-    return { x: event.touches[0].clientX, y: event.touches[0].clientY };
-  }
-  const mouseEvent = event as MouseEvent;
-  return { x: mouseEvent.clientX, y: mouseEvent.clientY };
-}
-
-function startDrag(city: City, event: MouseEvent | TouchEvent) {
-  if (!mapRef.value) return;
-  selectedCity.value = city.name;
-  draggingCity.value = city;
-
-  const mapRect = mapRef.value.getBoundingClientRect();
-  const target = event.currentTarget as HTMLElement | null;
-  const targetRect = target?.getBoundingClientRect();
-  const point = getClientPoint(event);
-  dragOffset.value = {
-    x: targetRect ? point.x - (targetRect.left - mapRect.left) : 0,
-    y: targetRect ? point.y - (targetRect.top - mapRect.top) : 0,
-  };
-
-  previousUserSelect.value = document.body.style.userSelect;
-  document.body.style.userSelect = 'none';
-
-  window.addEventListener('mousemove', handleDragMove);
-  window.addEventListener('mouseup', stopDrag);
-  window.addEventListener('touchmove', handleDragMove, { passive: false });
-  window.addEventListener('touchend', stopDrag);
-}
-
-function handleDragMove(event: MouseEvent | TouchEvent) {
-  if (!draggingCity.value || !mapRef.value) return;
-  if ('touches' in event) event.preventDefault();
-
-  const mapRect = mapRef.value.getBoundingClientRect();
-  const point = getClientPoint(event);
-  const x = point.x - mapRect.left - dragOffset.value.x;
-  const y = point.y - mapRect.top - dragOffset.value.y;
-  const left = Math.min(100, Math.max(0, (x / mapRect.width) * 100));
-  const top = Math.min(100, Math.max(0, (y / mapRect.height) * 100));
-
-  draggingCity.value.position.left = `${left}%`;
-  draggingCity.value.position.top = `${top}%`;
-}
-
-function stopDrag() {
-  draggingCity.value = null;
-  document.body.style.userSelect = previousUserSelect.value;
-  window.removeEventListener('mousemove', handleDragMove);
-  window.removeEventListener('mouseup', stopDrag);
-  window.removeEventListener('touchmove', handleDragMove);
-  window.removeEventListener('touchend', stopDrag);
-}
-
-onBeforeUnmount(() => {
-  stopDrag();
+onMounted(() => {
+  void loadSidoWeatherIfNeeded();
 });
-
 
 function tempColor(temp: number) {
   if (temp <= 5) return 'bg-blue-400';
@@ -269,5 +176,127 @@ function tempColor(temp: number) {
   if (temp <= 22) return 'bg-yellow-300';
   if (temp <= 27) return 'bg-orange-300';
   return 'bg-red-300';
+}
+
+async function loadSidoWeatherIfNeeded() {
+  const base = resolveBaseDateTime();
+  const cached = readCache(base.baseDate, base.baseTime);
+  if (cached) {
+    applyWeatherData(cached);
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams({ baseDate: base.baseDate, baseTime: base.baseTime });
+    const res = await fetch(`/api/map/sido?${params.toString()}`);
+    if (!res.ok) {
+      return;
+    }
+    const data = await res.json();
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+    const normalized = normalizeWeatherData(data);
+    writeCache(base.baseDate, base.baseTime, normalized);
+    applyWeatherData(normalized);
+  } catch {
+    // Ignore API errors; keep static fallback data.
+  }
+}
+
+function normalizeWeatherData(data: Record<string, any>) {
+  return Object.entries(data).reduce<Record<string, SidoWeatherPayload>>((acc, [key, value]) => {
+    if (Array.isArray(value)) {
+      acc[key] = { items: value };
+      return acc;
+    }
+    acc[key] = {
+      items: value?.items ?? [],
+      outfit: value?.outfit,
+      outfitRecommendation: value?.outfitRecommendation,
+      recommendedOutfit: value?.recommendedOutfit,
+      recommendation: value?.recommendation,
+    };
+    return acc;
+  }, {});
+}
+
+function applyWeatherData(normalized: Record<string, SidoWeatherPayload>) {
+  weatherBySido.value = normalized;
+  cities.value = cities.value.map((city) => {
+    const payload = normalized[city.name];
+    const items = payload?.items ?? [];
+    const nextTemp = items.length ? extractTemperature(items) : null;
+    const nextOutfit = payload ? extractOutfit(payload) : null;
+    if (nextTemp === null && nextOutfit === null) {
+      return city;
+    }
+    return {
+      ...city,
+      temp: nextTemp === null ? city.temp : nextTemp,
+      outfit: nextOutfit === null ? city.outfit : nextOutfit,
+    };
+  });
+}
+
+function extractTemperature(items: WeatherItem[]) {
+  const match = items.find((item) => item && (item.category === 'TMP' || item.category === 'T1H'));
+  if (!match?.fcstValue) return null;
+  const parsed = Number.parseFloat(match.fcstValue);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function extractOutfit(payload: SidoWeatherPayload) {
+  return (
+    payload.recommendation?.outfit ||
+    payload.outfit ||
+    payload.outfitRecommendation ||
+    payload.recommendedOutfit ||
+    null
+  );
+}
+
+function readCache(baseDate: string, baseTime: string) {
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (parsed.baseDate !== baseDate || parsed.baseTime !== baseTime) return null;
+    if (!parsed.data || typeof parsed.data !== 'object') return null;
+    return parsed.data as Record<string, SidoWeatherPayload>;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(baseDate: string, baseTime: string, data: Record<string, SidoWeatherPayload>) {
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify({ baseDate, baseTime, data }));
+  } catch {
+    // Ignore storage errors (private mode, quota, etc.).
+  }
+}
+
+function resolveBaseDateTime() {
+  const now = new Date(Date.now() - 30 * 60 * 1000);
+  const baseTimes = [2300, 2000, 1700, 1400, 1100, 800, 500, 200];
+  const hhmm = now.getHours() * 100 + now.getMinutes();
+  let picked = baseTimes.find((bt) => hhmm >= bt);
+
+  let date = new Date(now);
+  if (!picked) {
+    date.setDate(date.getDate() - 1);
+    picked = 2300;
+  }
+
+  const baseDate = [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('');
+
+  const baseTime = String(picked).padStart(4, '0');
+  return { baseDate, baseTime };
 }
 </script>

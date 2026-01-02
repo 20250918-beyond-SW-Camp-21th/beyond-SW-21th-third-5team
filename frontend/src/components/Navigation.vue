@@ -2,7 +2,7 @@
   <nav class="w-full h-[72px] bg-white/80 backdrop-blur-sm border-b border-[#E6EEF9] sticky top-0 z-50">
     <div class="max-w-[1440px] mx-auto px-20 h-full flex items-center justify-between">
       <div class="flex-shrink-0">
-        <h1 class="text-[20px] font-semibold text-[#1F2A37]">자란날씨</h1>
+        <h1 class="text-[20px] font-semibold text-[#1F2A37]">펭귄날씨</h1>
       </div>
 
       <button
