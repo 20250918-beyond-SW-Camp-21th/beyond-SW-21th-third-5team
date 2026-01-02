@@ -14,7 +14,7 @@
           />
 
           <div
-            v-for="city in cities"
+            v-for="city in visibleCities"
             :key="city.name"
             class="absolute"
             :style="{ top: city.position.top, left: city.position.left }"
@@ -30,6 +30,11 @@
                 :class="[tempColor(city.temp), selectedCity === city.name ? 'ring-4 ring-[#6AA9FF] ring-opacity-50' : '']"
               >
                 <span class="text-sm font-semibold text-[#1F2A37]">{{ city.temp }}°C</span>
+              </span>
+              <span
+                class="absolute -top-2 right-0 bg-white/80 border border-[#E6EEF9] text-[#1F2A37] text-xs px-2 py-1 rounded-full shadow-sm"
+              >
+                {{ formatPercent(city.pop) }}
               </span>
               <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap block">
                 <span class="text-xs font-medium text-[#6B7280]">{{ city.name }}</span>
@@ -47,19 +52,24 @@
               <h4 class="text-[#1F2A37] mb-1">{{ currentCity.name }}</h4>
               <div class="text-3xl font-bold text-[#1F2A37] mb-2">{{ currentCity.temp }}°C</div>
             </div>
-            <div class="text-4xl">🐧</div>
+            <img :src="mascotSrc" alt="마스코트" class="w-12 h-12 object-contain" />
           </div>
 
           <div class="space-y-2 mb-4">
             <div class="flex items-center gap-2 text-sm">
               <Wind class="w-4 h-4 text-[#6B7280]" />
               <span class="text-[#6B7280]">바람</span>
-              <span class="text-[#1F2A37] font-medium">3m/s</span>
+              <span class="text-[#1F2A37] font-medium">{{ formatWind(currentCity.wsd) }}</span>
             </div>
             <div class="flex items-center gap-2 text-sm">
               <Droplets class="w-4 h-4 text-[#6B7280]" />
               <span class="text-[#6B7280]">습도</span>
-              <span class="text-[#1F2A37] font-medium">45%</span>
+              <span class="text-[#1F2A37] font-medium">{{ formatPercent(currentCity.reh) }}</span>
+            </div>
+            <div class="flex items-center gap-2 text-sm">
+              <CloudRain class="w-4 h-4 text-[#6B7280]" />
+              <span class="text-[#6B7280]">강수확률</span>
+              <span class="text-[#1F2A37] font-medium">{{ formatPercent(currentCity.pop) }}</span>
             </div>
           </div>
 
@@ -83,7 +93,7 @@
           <h4 class="text-[#1F2A37] mb-4">인기 지역 빠른 선택</h4>
           <div class="flex flex-wrap gap-2">
             <button
-              v-for="city in popularCities"
+              v-for="city in loadedPopularCities"
               :key="city"
               type="button"
               class="px-4 py-2 rounded-xl transition-all"
@@ -100,20 +110,23 @@
 </template>
 
 <script setup lang="ts">
-import { Droplets, MapPin, Wind } from 'lucide-vue-next';
+import axios from 'axios';
+import { CloudRain, Droplets, MapPin, Wind } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import koreaMap from '../../assets/images/korea-map.png';
 
-type WeatherItem = {
-  category?: string;
-  fcstValue?: string;
-};
 type SidoWeatherPayload = {
-  items?: WeatherItem[];
-  outfit?: string;
-  outfitRecommendation?: string;
-  recommendedOutfit?: string;
-  recommendation?: { outfit?: string };
+  temperature?: number | null;
+  pop?: number | null;
+  wsd?: number | null;
+  reh?: number | null;
+  recommnededOutfit?: string;
+};
+
+type FetchResult = {
+  sido: string;
+  payload: SidoWeatherPayload | null;
+  error: boolean;
 };
 
 interface City {
@@ -121,12 +134,36 @@ interface City {
   temp: number;
   position: { top: string; left: string };
   outfit: string;
+  pop?: number | null;
+  wsd?: number | null;
+  reh?: number | null;
 }
 
+const SIDO_ORDER = [
+  '서울',
+  '부산',
+  '대구',
+  '인천',
+  '광주',
+  '대전',
+  '울산',
+  '세종',
+  '경기',
+  '강원',
+  '충북',
+  '충남',
+  '전북',
+  '전남',
+  '경북',
+  '경남',
+  '제주',
+];
+
 const selectedCity = ref('서울');
-const showOutfitIcons = ref(true);
 const weatherBySido = ref<Record<string, SidoWeatherPayload>>({});
+const loadedOrder = ref<string[]>([]);
 const cacheKey = 'weather-sido-cache';
+const mascotSrc = new URL('../../assets/images/마스코트.png', import.meta.url).href;
 
 const cities = ref<City[]>([
   { name: '서울', temp: 18, position: { top: '15.895806520806522%', left: '30.378257722007724%' }, outfit: '가디건 + 긴바지' },
@@ -159,14 +196,36 @@ const legends = [
   { range: '28°C+', color: 'bg-red-300' },
 ];
 
-const currentCity = computed(() => cities.value.find(city => city.name === selectedCity.value) ?? cities.value[0]);
+const visibleCities = computed(() => {
+  if (!loadedOrder.value.length) return [];
+  const orderSet = new Set(loadedOrder.value);
+  return cities.value.filter((city) => orderSet.has(city.name));
+});
+
+const loadedPopularCities = computed(() => {
+  if (!loadedOrder.value.length) return [];
+  const orderSet = new Set(loadedOrder.value);
+  return popularCities.filter((city) => orderSet.has(city));
+});
+
+const currentCity = computed(() => {
+  if (!loadedOrder.value.length) {
+    return cities.value[0];
+  }
+  const fallbackName = loadedOrder.value[0];
+  const fallback = cities.value.find((city) => city.name === fallbackName) ?? cities.value[0];
+  return loadedOrder.value.includes(selectedCity.value)
+    ? cities.value.find((city) => city.name === selectedCity.value) ?? fallback
+    : fallback;
+});
 
 if (import.meta.env.DEV) {
   (window as Window & { __temperatureMapCities?: City[] }).__temperatureMapCities = cities.value;
 }
 
 onMounted(() => {
-  void loadSidoWeatherIfNeeded();
+  console.debug('[TemperatureMap] mounted');
+  void loadSidoWeatherProgressively();
 });
 
 function tempColor(temp: number) {
@@ -178,82 +237,163 @@ function tempColor(temp: number) {
   return 'bg-red-300';
 }
 
-async function loadSidoWeatherIfNeeded() {
+async function loadSidoWeatherProgressively() {
+  console.debug('[TemperatureMap] start load');
   const base = resolveBaseDateTime();
-  const cached = readCache(base.baseDate, base.baseTime);
-  if (cached) {
-    applyWeatherData(cached);
-    return;
+  const cachedMap = readCache(base.baseDate, base.baseTime);
+  const staleMap = cachedMap ?? readStaleCache();
+  if (staleMap) {
+    applyCachedData(staleMap);
   }
 
+  for (let i = 0; i < SIDO_ORDER.length; i += 1) {
+    const sido = SIDO_ORDER[i];
+    if ((cachedMap ?? staleMap)?.[sido]) {
+      continue;
+    }
+
+    console.debug('[TemperatureMap] loading sido', sido);
+    let result: FetchResult;
+    try {
+      const payload = await fetchOneSido(sido, base.baseDate, base.baseTime);
+      result = { sido, payload, error: !payload };
+    } catch {
+      result = { sido, payload: null, error: true };
+    }
+
+    if (!result.payload && (staleMap ?? cachedMap)?.[sido]) {
+      result = { ...result, payload: (staleMap ?? cachedMap)?.[sido] ?? null, error: false };
+    }
+
+    applyBatch([result]);
+    const nextCache = mergeCache(cachedMap ?? staleMap ?? null, [result]);
+    if (nextCache) {
+      writeCache(base.baseDate, base.baseTime, nextCache);
+    }
+    await sleep(1500);
+  }
+}
+
+async function fetchOneSido(sido: string, baseDate: string, baseTime: string) {
+  console.debug('[TemperatureMap] fetchOneSido', sido);
   try {
-    const params = new URLSearchParams({ baseDate: base.baseDate, baseTime: base.baseTime });
-    const res = await fetch(`/api/map/sido?${params.toString()}`);
-    if (!res.ok) {
-      return;
+    const { data } = await axios.get('/api/map/sido/one', {
+      params: { sido, baseDate, baseTime },
+    });
+    return unwrapPayload(data);
+  } catch (error) {
+    if (shouldRetry(error)) {
+      await sleep(600);
+      const { data } = await axios.get('/api/map/sido/one', {
+        params: { sido, baseDate, baseTime },
+      });
+      return unwrapPayload(data);
     }
-    const data = await res.json();
-    if (!data || typeof data !== 'object') {
-      return;
-    }
-    const normalized = normalizeWeatherData(data);
-    writeCache(base.baseDate, base.baseTime, normalized);
-    applyWeatherData(normalized);
-  } catch {
-    // Ignore API errors; keep static fallback data.
+    throw error;
   }
 }
 
-function normalizeWeatherData(data: Record<string, any>) {
-  return Object.entries(data).reduce<Record<string, SidoWeatherPayload>>((acc, [key, value]) => {
-    if (Array.isArray(value)) {
-      acc[key] = { items: value };
-      return acc;
-    }
-    acc[key] = {
-      items: value?.items ?? [],
-      outfit: value?.outfit,
-      outfitRecommendation: value?.outfitRecommendation,
-      recommendedOutfit: value?.recommendedOutfit,
-      recommendation: value?.recommendation,
-    };
-    return acc;
-  }, {});
+function unwrapPayload(data: any): SidoWeatherPayload | null {
+  const candidate = data && typeof data === 'object' && 'success' in data && 'data' in data ? data.data : data;
+  if (!candidate || typeof candidate !== 'object') return null;
+  return {
+    temperature: candidate.temperature ?? null,
+    pop: candidate.pop ?? null,
+    wsd: candidate.wsd ?? null,
+    reh: candidate.reh ?? null,
+    recommnededOutfit: candidate.recommnededOutfit ?? null,
+  };
 }
 
-function applyWeatherData(normalized: Record<string, SidoWeatherPayload>) {
-  weatherBySido.value = normalized;
-  cities.value = cities.value.map((city) => {
-    const payload = normalized[city.name];
-    const items = payload?.items ?? [];
-    const nextTemp = items.length ? extractTemperature(items) : null;
-    const nextOutfit = payload ? extractOutfit(payload) : null;
-    if (nextTemp === null && nextOutfit === null) {
-      return city;
+function applyCachedData(cachedMap: Record<string, SidoWeatherPayload>) {
+  Object.entries(cachedMap).forEach(([sido, payload]) => {
+    if (payload) {
+      applySidoPayload(sido, payload);
     }
+    pushLoadedOrder(sido);
+  });
+}
+
+function applyBatch(results: FetchResult[]) {
+  results.forEach((result) => {
+    if (result.payload) {
+      applySidoPayload(result.sido, result.payload);
+    }
+    pushLoadedOrder(result.sido);
+  });
+}
+
+function applySidoPayload(sido: string, payload: SidoWeatherPayload) {
+  weatherBySido.value = {
+    ...weatherBySido.value,
+    [sido]: payload,
+  };
+  cities.value = cities.value.map((city) => {
+    if (city.name !== sido) return city;
+    const nextTemp = payload.temperature ?? null;
+    const nextPop = payload.pop ?? null;
+    const nextWsd = payload.wsd ?? null;
+    const nextReh = payload.reh ?? null;
+    const nextOutfit = payload.recommnededOutfit ?? null;
     return {
       ...city,
       temp: nextTemp === null ? city.temp : nextTemp,
       outfit: nextOutfit === null ? city.outfit : nextOutfit,
+      pop: nextPop === null ? city.pop : nextPop,
+      wsd: nextWsd === null ? city.wsd : nextWsd,
+      reh: nextReh === null ? city.reh : nextReh,
     };
   });
 }
 
-function extractTemperature(items: WeatherItem[]) {
-  const match = items.find((item) => item && (item.category === 'TMP' || item.category === 'T1H'));
-  if (!match?.fcstValue) return null;
-  const parsed = Number.parseFloat(match.fcstValue);
-  return Number.isFinite(parsed) ? parsed : null;
+function pushLoadedOrder(sido: string) {
+  if (!loadedOrder.value.includes(sido)) {
+    loadedOrder.value = [...loadedOrder.value, sido];
+  }
 }
 
-function extractOutfit(payload: SidoWeatherPayload) {
-  return (
-    payload.recommendation?.outfit ||
-    payload.outfit ||
-    payload.outfitRecommendation ||
-    payload.recommendedOutfit ||
-    null
-  );
+function mergeCache(
+  cachedMap: Record<string, SidoWeatherPayload> | null,
+  results: FetchResult[]
+): Record<string, SidoWeatherPayload> | null {
+  const nextMap = { ...(cachedMap ?? {}) };
+  let updated = false;
+  results.forEach((result) => {
+    if (result.payload) {
+      nextMap[result.sido] = result.payload;
+      updated = true;
+    }
+  });
+  return updated ? nextMap : cachedMap;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetry(error: unknown) {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+  const status = error.response?.status;
+  if (!status) {
+    return true;
+  }
+  return status === 429 || status >= 500;
+}
+
+function formatPercent(value?: number | null) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '--%';
+  }
+  return `${Math.round(value)}%`;
+}
+
+function formatWind(value?: number | null) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '--m/s';
+  }
+  return `${value}m/s`;
 }
 
 function readCache(baseDate: string, baseTime: string) {
@@ -272,9 +412,22 @@ function readCache(baseDate: string, baseTime: string) {
 
 function writeCache(baseDate: string, baseTime: string, data: Record<string, SidoWeatherPayload>) {
   try {
-    localStorage.setItem(cacheKey, JSON.stringify({ baseDate, baseTime, data }));
+    localStorage.setItem(cacheKey, JSON.stringify({ baseDate, baseTime, data, savedAt: Date.now() }));
   } catch {
     // Ignore storage errors (private mode, quota, etc.).
+  }
+}
+
+function readStaleCache() {
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.data || typeof parsed.data !== 'object') return null;
+    return parsed.data as Record<string, SidoWeatherPayload>;
+  } catch {
+    return null;
   }
 }
 
