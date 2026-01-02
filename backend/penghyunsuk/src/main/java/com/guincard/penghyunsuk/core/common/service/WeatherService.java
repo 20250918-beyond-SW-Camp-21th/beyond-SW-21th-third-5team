@@ -2,19 +2,28 @@ package com.guincard.penghyunsuk.core.common.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.guincard.penghyunsuk.core.support.error.UpstreamRateLimitedException;
+import com.guincard.penghyunsuk.core.support.error.UpstreamServiceException;
+import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -41,26 +50,30 @@ public class WeatherService {
 
         BaseDateTime dt = resolveBaseDateTime(baseDate, baseTime);
 
+        return getForecastCached(nx, ny, dt.baseDate(), dt.baseTime());
+    }
+
+    @Cacheable(
+            cacheNames = "weatherForecast",
+            key = "T(String).format('grid:%s:%s:%s:%s', #nx, #ny, #baseDate, #baseTime)",
+            sync = true
+    )
+    public JsonNode getForecastCached(Integer nx, Integer ny, String baseDate, String baseTime) {
         URI uri = UriComponentsBuilder
                 .fromHttpUrl(shtUrl)
                 .queryParam("serviceKey", serviceKey)
                 .queryParam("pageNo", 1)
                 .queryParam("numOfRows", 1000)
                 .queryParam("dataType", "JSON")
-                .queryParam("base_date", dt.baseDate)
-                .queryParam("base_time", dt.baseTime)
+                .queryParam("base_date", baseDate)
+                .queryParam("base_time", baseTime)
                 .queryParam("nx", nx)
                 .queryParam("ny", ny)
-                .build(true)
+//                .build(true)
+                .build(false)
                 .toUri();
 
-        String body = webClientBuilder.build()
-                .get()
-                .uri(uri)
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
+        String body = fetchForecastBody(uri);
 
         return extractItems(body);
     }
@@ -95,6 +108,82 @@ public class WeatherService {
             return items;
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "응답 파싱 실패: " + e.getMessage(), e);
+        }
+    }
+
+    private String fetchForecastBody(URI uri) {
+        return webClientBuilder.build()
+                .get()
+                .uri(uri)
+                .accept(MediaType.APPLICATION_JSON)
+                .exchangeToMono(response -> {
+                    if (response.statusCode().equals(HttpStatus.TOO_MANY_REQUESTS)) {
+                        Duration retryAfter = parseRetryAfter(response.headers().asHttpHeaders());
+                        return Mono.error(new UpstreamRateLimitedException("기상청 API 호출 제한에 걸렸습니다.", retryAfter));
+                    }
+                    if (response.statusCode().is5xxServerError()) {
+                        return response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .flatMap(body -> Mono.error(new UpstreamServiceException("기상청 API 5xx 오류가 발생했습니다.")));
+                    }
+                    if (!response.statusCode().is2xxSuccessful()) {
+                        return response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .flatMap(body -> Mono.error(new ResponseStatusException(
+                                        HttpStatus.BAD_GATEWAY,
+                                        "기상청 API 오류: " + response.statusCode().value()
+                                )));
+                    }
+                    return response.bodyToMono(String.class);
+                })
+                .retryWhen(buildRetrySpec())
+                .block();
+    }
+
+    private Retry buildRetrySpec() {
+        int maxRetries = 3;
+        Duration baseDelay = Duration.ofSeconds(1);
+
+        return Retry.from(retrySignals -> retrySignals.flatMap(signal -> {
+            Throwable failure = signal.failure();
+            long attempt = signal.totalRetries();
+
+            if (attempt >= maxRetries) {
+                return Mono.error(failure);
+            }
+
+            if (failure instanceof UpstreamRateLimitedException rateLimited) {
+                Duration delay = rateLimited.getRetryAfter();
+                if (delay == null || delay.isNegative()) {
+                    delay = baseDelay.multipliedBy((long) Math.pow(2, attempt));
+                }
+                return Mono.delay(delay);
+            }
+
+            if (failure instanceof UpstreamServiceException) {
+                Duration delay = baseDelay.multipliedBy((long) Math.pow(2, attempt));
+                return Mono.delay(delay);
+            }
+
+            return Mono.error(failure);
+        }));
+    }
+
+    private Duration parseRetryAfter(HttpHeaders headers) {
+        String retryAfter = headers.getFirst(HttpHeaders.RETRY_AFTER);
+        if (retryAfter == null || retryAfter.isBlank()) {
+            return null;
+        }
+        String trimmed = retryAfter.trim();
+        if (trimmed.matches("\\d+")) {
+            return Duration.ofSeconds(Long.parseLong(trimmed));
+        }
+        try {
+            ZonedDateTime retryAt = ZonedDateTime.parse(trimmed, DateTimeFormatter.RFC_1123_DATE_TIME);
+            Duration delay = Duration.between(ZonedDateTime.now(retryAt.getZone()), retryAt);
+            return delay.isNegative() ? Duration.ZERO : delay;
+        } catch (DateTimeParseException ex) {
+            return null;
         }
     }
 
