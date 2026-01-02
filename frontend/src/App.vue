@@ -1,14 +1,21 @@
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted, onBeforeUnmount, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Navigation from "./components/Navigation.vue";
 import AuthModal from "./components/auth/authModal.vue";
-import { onMounted, onBeforeUnmount } from "vue";
 import { useAuthModalStore } from "./stores/authModalStore";
+import { tokenStore } from "@/api/tokenStore";
+import { authApi } from "@/api/auth/authApi";
 
 const route = useRoute();
 const router = useRouter();
 const authModal = useAuthModalStore();
+
+const authVersion = ref(0);
+const isAuthed = computed(() => {
+  authVersion.value;
+  return !!tokenStore.access;
+});
 
 const tabByRouteName = {
   today: "오늘의 날씨",
@@ -26,10 +33,15 @@ const routeByTab = {
 
 const activeTab = computed(() => tabByRouteName[route.name] ?? "오늘의 날씨");
 
-function handleTabChange(tab) {
-  console.log("tab-change:", JSON.stringify(tab));
+async function handleTabChange(tab) {
+  console.log("before", authModal.isOpen, authModal.mode);
   if (tab === "로그인") {
     authModal.openWith("login");
+    console.log("after", authModal.isOpen, authModal.mode);
+    return;
+  }
+  if (tab === "로그아웃") {
+    await logout();
     return;
   }
   const name = routeByTab[tab];
@@ -39,18 +51,37 @@ function handleTabChange(tab) {
 function openLogin() {
   authModal.openWith("login");
 }
+
+function onAuthChanged() {
+  console.log("auth:changed received");
+  authVersion.value++;
+}
+
 onMounted(() => {
   window.addEventListener("auth:open", openLogin);
-});
-onBeforeUnmount(() => {
-  window.removeEventListener("auth:open", openLogin);
+  window.addEventListener("auth:changed", onAuthChanged);
 });
 
+onBeforeUnmount(() => {
+  window.removeEventListener("auth:open", openLogin);
+  window.removeEventListener("auth:changed", onAuthChanged);
+});
+
+async function logout() {
+  try {
+    const refreshToken = tokenStore.refresh;
+    if (refreshToken) await authApi.logout({ refreshToken });
+  } finally {
+    tokenStore.clear();
+    authVersion.value++;
+    router.push({ name: "today" });
+  }
+}
 </script>
 
 <template>
   <div class="min-h-screen bg-gradient-to-b from-[#F6FAFF] to-[#FFFFFF]">
-    <Navigation :active-tab="activeTab" @tab-change="handleTabChange" />
+    <Navigation :active-tab="activeTab" :is-authed="isAuthed" @tab-change="handleTabChange" />
     <RouterView />
     <AuthModal />
   </div>
