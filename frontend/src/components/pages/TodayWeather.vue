@@ -26,7 +26,7 @@
 
     <!-- 각 페이지 미리보기 카드   -->
     <div class="grid grid-cols-3 gap-6">
-      <PreviewCard type="tomorrow" />
+      <PreviewCard type="tomorrow" :content="tomorrowPreview" />
       <PreviewCard type="week" />
       <PreviewCard type="map" />
     </div>
@@ -71,6 +71,13 @@ type OutfitItem = {
   label: string;
 };
 
+type TomorrowPreview = {
+  title: string;
+  subtitle: string;
+  highlight: string;
+  description: string;
+};
+
 /* 날씨 화면 상태 */
 const weatherItems = ref<WeatherItem[] | null>(null);
 const hourlyItems = ref<{ time: string; temperature: string; precipitation:string; summary?: string }[]>([]);
@@ -83,6 +90,7 @@ const closestForecast = computed(() => getClosestForecast(weatherItems.value ?? 
 
 /*현재 날씨 타입 계산(sunny/cloud/rain/snow/thunder)*/
 const weatherType = computed(() => mapWeatherKey());
+const tomorrowPreview = computed(() => buildTomorrowPreview(weatherItems.value ?? []));
 
 /* 날씨타입+온도로 펭귄 영상 선택*/
 const heroVideoSrc = computed(() => {
@@ -337,6 +345,75 @@ function formatKoreanDate(date: Date) {
   const day = date.getDate();
   const weekday = weekdays[date.getDay()];
   return `${month}월 ${day}일 (${weekday})`;
+}
+
+// 날짜 형태 변환(프리뷰)
+function formatMonthDay(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${month}/${day}`;
+}
+
+// 날짜 형식 맞추기
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}${month}${day}`;
+}
+
+/*프리뷰*/
+function buildTomorrowPreview(items: WeatherItem[]): TomorrowPreview | null {
+  if (!items.length) {
+    return null;
+  }
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const tomorrowKey = formatDateKey(tomorrow);
+  const tomorrowItems = items.filter((item) => item && item.fcstDate === tomorrowKey && item.fcstTime);
+
+  if (!tomorrowItems.length) {
+    return null;
+  }
+
+  const temps = tomorrowItems
+    .filter((item) => item.category === "TMP" || item.category === "T1H")
+    .map((item) => parseNumber(item.fcstValue))
+    .filter((value): value is number => value !== null);
+
+  const maxTemp = temps.length ? Math.max(...temps) : null;
+  const minTemp = temps.length ? Math.min(...temps) : null;
+
+  const summaryTime = pickSummaryTime(tomorrowItems);
+  const summaryKey = summaryTime ? mapWeatherKeyForTime(items, tomorrowKey, summaryTime) : mapWeatherKey();
+  const summaryLabel = mapWeatherLabel(summaryKey);
+
+  const maxDisplay = maxTemp === null ? "--" : String(maxTemp);
+  const minDisplay = minTemp === null ? "--" : String(minTemp);
+
+  return {
+    title: "내일 날씨",
+    subtitle: formatMonthDay(tomorrow),
+    highlight: `${summaryLabel} ${maxDisplay}C/${minDisplay}C`,
+    description: `최고 ${maxDisplay}C · 최저 ${minDisplay}C`,
+  };
+}
+
+/* 프리뷰 기준 시간 정함(날씨 종류 결정)*/
+function pickSummaryTime(items: WeatherItem[]) {
+  const times = items
+    .map((item) => item.fcstTime)
+    .filter((time): time is string => !!time);
+
+  if (!times.length) {
+    return null;
+  }
+  if (times.includes("1200")) {
+    return "1200";
+  }
+  return times.sort()[0];
 }
 
 /* 시간대별 온도 데이터 (최대 8개)*/
