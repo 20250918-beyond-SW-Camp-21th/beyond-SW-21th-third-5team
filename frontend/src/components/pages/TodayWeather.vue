@@ -2,7 +2,7 @@
   <main class="max-w-[1440px] mx-auto px-20 py-8">
     <div class="grid grid-cols-2 gap-6 mb-8">
       <HeroCard :hero-video-src="heroVideoSrc" :weather-type="weatherType" />
-            <WeatherSummaryCard
+      <WeatherSummaryCard
         :location-label="locationDisplay"
         :date-label="dateLabel"
         :status-message="statusMessage"
@@ -15,11 +15,11 @@
     </div>
 
     <div class="mb-8">
-      <HourlyForecastCard />
+      <HourlyForecastCard :hourly-items="hourlyItems" />
     </div>
 
     <div class="mb-8">
-      <AlertBanner />
+      <AlertBanner :weather-type="weatherType"/>
     </div>
 
     <div class="grid grid-cols-3 gap-6">
@@ -33,7 +33,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import axios from 'axios';
-import { CloudRain, Droplets, Glasses, ShoppingBag, Wind, Coffee } from 'lucide-vue-next';
+import { Cloud, CloudRain, CloudSnow, Droplets, Glasses, ShoppingBag, Sun, Wind, Coffee, Zap } from 'lucide-vue-next';
 import AlertBanner from '../AlertBanner.vue';
 import HeroCard from '../HeroCard.vue';
 import HourlyForecastCard from '../HourlyForecastCard.vue';
@@ -65,6 +65,7 @@ type OutfitItem = {
 };
 
 const weatherItems = ref<WeatherItem[] | null>(null);
+const hourlyItems = ref<{ time: string; temperature: string; precipitation:string; summary?: string }[]>([]);
 const weatherError = ref<string | null>(null);
 const isLoading = ref(false);
 const locationLabel = ref("현재 위치");
@@ -215,6 +216,7 @@ async function loadWeatherByLocation() {
       params: { lat, lon },
     });
     weatherItems.value = Array.isArray(data) ? data : data?.items ?? [];
+    hourlyItems.value = buildHourlyItems(weatherItems.value ?? []);
   } catch (error) {
     if (axios.isAxiosError(error)) {
       const status = error.response?.status;
@@ -289,6 +291,7 @@ function mapWeatherLabel(type: string) {
     default:
       return "--";
   }
+
 }
 
 function mapTemperatureKey(tempC: number) {
@@ -313,6 +316,138 @@ function formatKoreanDate(date: Date) {
   const day = date.getDate();
   const weekday = weekdays[date.getDay()];
   return `${month}월 ${day}일 (${weekday})`;
+}
+
+
+function buildHourlyItems(items: WeatherItem[]) {
+  if (!items.length) {
+    return [] as { time: string; temperature: string; precipitation: string; summary?: string }[];
+  }
+
+  const byKey = new Map<string, WeatherItem>();
+
+  for (const item of items) {
+    if (!item || !item.category) {
+      continue;
+    }
+    if (item.category !== 'TMP' && item.category !== 'T1H') {
+      continue;
+    }
+    if (!item.fcstDate || !item.fcstTime || !item.fcstValue) {
+      continue;
+    }
+    const key = `${item.fcstDate}${item.fcstTime}`;
+    const existing = byKey.get(key);
+    if (!existing || item.category === 'TMP') {
+      byKey.set(key, item);
+    }
+  }
+
+  const now = new Date();
+  const rows = Array.from(byKey.values())
+    .map((item) => ({
+      item,
+      key: `${item.fcstDate}${item.fcstTime}`,
+      dateTime: parseForecastDateTime(item.fcstDate, item.fcstTime),
+    }))
+    .sort((a, b) => {
+      if (a.dateTime && b.dateTime) {
+        return a.dateTime.getTime() - b.dateTime.getTime();
+      }
+      if (a.dateTime) {
+        return -1;
+      }
+      if (b.dateTime) {
+        return 1;
+      }
+      return a.key.localeCompare(b.key);
+    });
+
+  const future = rows.filter((entry) => entry.dateTime && entry.dateTime >= now);
+  const past = rows.filter((entry) => entry.dateTime && entry.dateTime < now).reverse();
+  const ordered = (future.length || past.length ? future.concat(past) : rows).slice(0, 8);
+
+  return ordered.map(({ item }) => {
+    const rawPrecipitation =
+      findValueForTime(items, ['RN1'], item.fcstDate!, item.fcstTime!) ??
+      findValueForTime(items, ['PCP'], item.fcstDate!, item.fcstTime!) ??
+      '--';
+    const precipitation = normalizePrecipitation(rawPrecipitation);
+
+    return {
+      time: formatHour(item.fcstTime),
+      temperature: item.fcstValue ?? '--',
+      precipitation,
+      summary: mapWeatherLabel(mapWeatherKeyForTime(items, item.fcstDate!, item.fcstTime!)),
+    };
+  });
+}
+
+function mapWeatherKeyForTime(items: WeatherItem[], fcstDate: string, fcstTime: string) {
+  const lightning = findValueForTime(items, ['LGT'], fcstDate, fcstTime);
+  const lightningValue = parseNumber(lightning);
+  if (lightningValue !== null && lightningValue > 0) {
+    return 'thunder';
+  }
+
+  const precipitationType = parseNumber(findValueForTime(items, ['PTY'], fcstDate, fcstTime));
+  if (precipitationType !== null && precipitationType > 0) {
+    if (precipitationType === 3) {
+      return 'snow';
+    }
+    return 'rain';
+  }
+
+  const sky = findValueForTime(items, ['SKY'], fcstDate, fcstTime);
+  if (sky === '1') {
+    return 'sunny';
+  }
+  if (sky === '3' || sky === '4' || sky === '2') {
+    return 'cloud';
+  }
+  return 'cloud';
+}
+
+function findValueForTime(items: WeatherItem[], categories: string[], fcstDate: string, fcstTime: string) {
+  for (const item of items) {
+    if (!item || !item.category) {
+      continue;
+    }
+    if (!categories.includes(item.category)) {
+      continue;
+    }
+    if (item.fcstDate === fcstDate && item.fcstTime === fcstTime) {
+      return item.fcstValue ?? null;
+    }
+  }
+  return null;
+}
+
+function normalizePrecipitation(value: string) {
+  if (!value || value.trim() === '--') {
+    return '0';
+  }
+  const cleaned = value.trim();
+  if (cleaned === '강수없음') {
+    return '0';
+  }
+  return cleaned;
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}${month}${day}`;
+}
+
+function formatHour(fcstTime?: string) {
+  if (!fcstTime || fcstTime.length !== 4) {
+    return '--:--';
+  }
+  const hour = fcstTime.slice(0, 2);
+  const minute = fcstTime.slice(2);
+  return `${hour}:${minute}`;
 }
 
 function parseNumber(value?: string | null) {

@@ -3,13 +3,6 @@
     <div class="absolute top-0 right-0 w-64 h-64 bg-white/30 rounded-full blur-3xl" />
     <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/40 rounded-full blur-2xl" />
 
-    <div class="absolute top-12 right-16">
-      <Zap class="w-8 h-8 text-yellow-400 fill-yellow-300" />
-    </div>
-    <div class="absolute top-24 right-32">
-      <Zap class="w-6 h-6 text-yellow-400 fill-yellow-300 opacity-70" />
-    </div>
-
     <div class="relative z-10 flex-1 flex items-center justify-center">
       <div class="relative">
         <video
@@ -34,27 +27,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Zap } from 'lucide-vue-next';
+import { getWeatherMessage} from "../components/ui/weatherMessages";
 
 const props = defineProps<{
   heroVideoSrc: string;
   weatherType?: string;
 }>();
 
-const heroMessage = computed(() => {
-  switch (props.weatherType) {
-    case 'sunny':
-      return '햇볕은 쨍쨍 모래알은 반짝~';
-    case 'cloud':
-      return '날씨 흐림 예상!!';
-    case 'rain':
-      return '오늘은 비가 와요! 우산 필수!';
-    case 'snow':
-      return '귀여운 펭귄 눈사람 만드는건 어때요?';
-    case 'thunder':
-      return '우르르 쾅쾅! 번개가 친대요';
-    default:
-      return '오늘도 행복한 하루 보내세요!';
-  }
-});
+const heroMessage = computed(() => getWeatherMessage(props.weatherType));
 </script>
