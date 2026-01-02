@@ -2,14 +2,11 @@
   <div v-if="modal.isOpen" class="modal-backdrop" @click.self="closeAll">
     <div class="modal-card" :class="{ wide: view !== 'login' }">
       <div class="modal-header">
-        <h2 class="modal-title">
-          {{ viewTitle }}
-        </h2>
+        <h2 class="modal-title">{{ viewTitle }}</h2>
         <button class="modal-close" @click="closeAll">✕</button>
       </div>
 
       <div class="modal-body">
-        <!-- LOGIN -->
         <template v-if="view === 'login'">
           <input v-model.trim="loginId" class="modal-input" placeholder="로그인 ID" />
           <input v-model="password" class="modal-input" placeholder="비밀번호" type="password" />
@@ -18,13 +15,12 @@
           </button>
 
           <div class="modal-row">
-            <button class="modal-link-inline" @click="goSignup">회원가입</button>
+            <button class="modal-link-inline" :disabled="busy" @click="goSignup">회원가입</button>
             <span class="dot">·</span>
-            <button class="modal-link-inline" @click="goResetRequest">비밀번호 찾기</button>
+            <button class="modal-link-inline" :disabled="busy" @click="goResetRequest">비밀번호 찾기</button>
           </div>
         </template>
 
-        <!-- SIGNUP -->
         <template v-else-if="view === 'signup'">
           <input v-model.trim="signup.loginId" class="modal-input" placeholder="로그인 ID (4~20, 영문/숫자)" />
           <input v-model.trim="signup.email" class="modal-input" placeholder="이메일" />
@@ -38,7 +34,6 @@
           <button class="modal-link" :disabled="busy" @click="goLogin">로그인으로</button>
         </template>
 
-        <!-- RESET (2-step) -->
         <template v-else>
           <template v-if="resetStep === 'request'">
             <input v-model.trim="reset.loginId" class="modal-input" placeholder="로그인 ID" />
@@ -75,14 +70,10 @@
 import { computed, ref } from "vue";
 import { useAuthModalStore } from "@/stores/authModalStore";
 import { authApi } from "@/api/auth/authApi";
-import { tokenStore } from "@/api/tokenStore.js";
+import { tokenStore } from "@/api/tokenStore";
 
 const modal = useAuthModalStore();
 
-/**
- * view: login | signup | reset
- * resetStep: request | confirm
- */
 const view = ref("login");
 const resetStep = ref("request");
 
@@ -151,7 +142,7 @@ async function submitLogin() {
     const data = res.data?.data;
     tokenStore.access = data.accessToken;
     tokenStore.refresh = data.refreshToken;
-    infoMsg.value = "로그인 성공";
+    window.dispatchEvent(new CustomEvent("auth:changed"));
     closeAll();
   } catch (e) {
     errorMsg.value = "로그인에 실패했습니다.";
@@ -182,8 +173,6 @@ async function submitResetRequest() {
     infoMsg.value = "이메일로 코드를 전송했습니다. 코드를 입력해 주세요.";
     resetStep.value = "confirm";
   } catch (e) {
-    // 백엔드 메시지 정책상 “정보가 맞다면 전송” 같은 응답을 주는 편이라,
-    // 실패해도 사용자에겐 동일 메시지로 처리해도 됨.
     infoMsg.value = "입력하신 정보가 맞다면 이메일로 코드를 전송했습니다.";
     resetStep.value = "confirm";
   } finally {
@@ -252,7 +241,9 @@ async function submitResetConfirm() {
   cursor: pointer;
   opacity: 0.6;
 }
-.modal-close:hover { opacity: 1; }
+.modal-close:hover {
+  opacity: 1;
+}
 
 .modal-body {
   display: flex;
@@ -267,7 +258,9 @@ async function submitResetConfirm() {
   padding: 10px 12px;
   outline: none;
 }
-.modal-input:focus { border-color: #999; }
+.modal-input:focus {
+  border-color: #999;
+}
 
 .modal-primary {
   width: 100%;
@@ -278,7 +271,10 @@ async function submitResetConfirm() {
   color: #fff;
   cursor: pointer;
 }
-.modal-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.modal-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .modal-row {
   display: flex;
@@ -294,7 +290,9 @@ async function submitResetConfirm() {
   font-size: 14px;
   cursor: pointer;
 }
-.dot { color: #999; }
+.dot {
+  color: #999;
+}
 
 .modal-link {
   width: 100%;
@@ -304,7 +302,10 @@ async function submitResetConfirm() {
   font-size: 14px;
   cursor: pointer;
 }
-.modal-link:disabled { opacity: 0.6; cursor: not-allowed; }
+.modal-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .modal-error {
   margin: 4px 0 0;
