@@ -12,6 +12,7 @@
         :weather-stats="weatherStats"
         :outfit-items="outfitItems"
         :outfit-description="outfitDescription"
+        @record="goToCalendar"
       />
     </div>
 
@@ -35,6 +36,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { Cloud, CloudRain, CloudSnow, Droplets, Glasses, ShoppingBag, Sun, Wind, Coffee, Zap, Shirt, Layers, ThermometerSnowflake } from 'lucide-vue-next';
 import AlertBanner from '../AlertBanner.vue';
@@ -84,6 +86,7 @@ const hourlyItems = ref<{ time: string; temperature: string; precipitation:strin
 const weatherError = ref<string | null>(null);
 const isLoading = ref(false);
 const locationLabel = ref("현재 위치");
+const router = useRouter();
 
 /* 현재 시간에 가장 가까운 예보 시각 계산 */
 const closestForecast = computed(() => getClosestForecast(weatherItems.value ?? []));
@@ -623,4 +626,8 @@ function parseForecastDateTime(fcstDate?: string, fcstTime?: string) {
 onMounted(() => {
   void loadWeatherByLocation();
 });
+
+function goToCalendar() {
+  router.push({ name: 'calendar' });
+}
 </script>
