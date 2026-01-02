@@ -51,7 +51,8 @@ public class WeatherService {
                 .queryParam("base_time", dt.baseTime)
                 .queryParam("nx", nx)
                 .queryParam("ny", ny)
-                .build(true)
+//                .build(true)
+                .build(false)
                 .toUri();
 
         String body = webClientBuilder.build()

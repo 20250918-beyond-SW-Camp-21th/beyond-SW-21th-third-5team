@@ -1,30 +1,41 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import Navigation from './components/Navigation.vue';
+
+const route = useRoute();
+const router = useRouter();
+
+const tabByRouteName = {
+  today: '오늘의 날씨',
+  weekly: '이번주 날씨',
+  map: '국내 기온지도',
+  calendar: '달력 기록',
+  login: '로그인',
+};
+
+const routeByTab = {
+  '오늘의 날씨': 'today',
+  '이번주 날씨': 'weekly',
+  '국내 기온지도': 'map',
+  '달력 기록': 'calendar',
+  '로그인': 'login',
+};
+
+const activeTab = computed(() => tabByRouteName[route.name] ?? '오늘의 날씨');
+const isLogin = computed(() => route.name === 'login');
+
+function handleTabChange(tab) {
+  const name = routeByTab[tab];
+  if (name) {
+    router.push({ name });
+  }
+}
 </script>
 
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+  <div class="min-h-screen bg-gradient-to-b from-[#F6FAFF] to-[#FFFFFF]">
+    <Navigation :active-tab="activeTab" :simple="isLogin" @tab-change="handleTabChange" />
+    <RouterView />
   </div>
-  <HelloWorld msg="Vite + Vue" />
 </template>
-
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-</style>
