@@ -27,24 +27,45 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import AlertBanner from '../AlertBanner.vue';
 import HeroCard from '../HeroCard.vue';
 import HourlyForecastCard from '../HourlyForecastCard.vue';
 import PreviewCard from '../PreviewCard.vue';
 import WeatherSummaryCard from '../WeatherSummaryCard.vue';
 
-const heroVideoSrc = new URL('../../assets/videos/흐림_4도이하.mp4', import.meta.url).href;
+const heroVideos = import.meta.glob('../../assets/videos/*.mp4', {
+  eager: true,
+  import: 'default',
+});
+const fallbackHeroVideoSrc = new URL('../../assets/videos/basic.mp4', import.meta.url).href;
 
 type WeatherItem = {
   category?: string;
   fcstValue?: string;
+  fcstDate?: string;
+  fcstTime?: string;
 };
 
 const weatherItems = ref<WeatherItem[] | null>(null);
 const weatherError = ref<string | null>(null);
 const isLoading = ref(false);
 const locationLabel = ref('현재 위치');
+
+const closestForecast = computed(() => getClosestForecast(weatherItems.value ?? []));
+
+const heroVideoSrc = computed(() => {
+  const tempValue = findValue(['TMP', 'T1H']);
+  const tempC = parseNumber(tempValue);
+  if (tempC === null) {
+    return fallbackHeroVideoSrc;
+  }
+  const tempKey = mapTemperatureKey(tempC);
+  const weatherKey = mapWeatherKey();
+  const videoKey = `${tempKey}_${weatherKey}`;
+  const path = `../../assets/videos/${videoKey}.mp4`;
+  return (heroVideos[path] as string | undefined) ?? fallbackHeroVideoSrc;
+});
 
 function getCurrentPosition(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
@@ -81,6 +102,137 @@ async function loadWeatherByLocation() {
   } finally {
     isLoading.value = false;
   }
+}
+
+function findValue(categories: string[]) {
+  const items = weatherItems.value ?? [];
+  if (!items.length) {
+    return null;
+  }
+  const target = closestForecast.value;
+  if (target) {
+    const match = items.find(
+      (item) =>
+        item &&
+        categories.includes(item.category ?? '') &&
+        item.fcstDate === target.fcstDate &&
+        item.fcstTime === target.fcstTime,
+    );
+    if (match?.fcstValue) {
+      return match.fcstValue;
+    }
+  }
+  const fallback = items.find((item) => item && categories.includes(item.category ?? ''));
+  return fallback?.fcstValue ?? null;
+}
+
+function mapWeatherKey() {
+  const lightning = parseNumber(findValue(['LGT']));
+  if (lightning !== null && lightning > 0) {
+    return 'thunder';
+  }
+
+  const precipitationType = parseNumber(findValue(['PTY']));
+  if (precipitationType !== null && precipitationType > 0) {
+    if (precipitationType === 3) {
+      return 'snow';
+    }
+    return 'rain';
+  }
+
+  const sky = findValue(['SKY']);
+  if (sky === '1') {
+    return 'sunny';
+  }
+  return 'cloud';
+}
+
+function mapTemperatureKey(tempC: number) {
+  if (tempC >= 23) {
+    return '23';
+  }
+  if (tempC >= 17) {
+    return '22';
+  }
+  if (tempC >= 9) {
+    return '16';
+  }
+  if (tempC >= 5) {
+    return '8';
+  }
+  return '4';
+}
+
+function parseNumber(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function getClosestForecast(items: WeatherItem[]) {
+  if (!items.length) {
+    return null;
+  }
+
+  const candidates = new Map<string, Date>();
+  for (const item of items) {
+    const date = parseForecastDateTime(item.fcstDate, item.fcstTime);
+    if (!date) {
+      continue;
+    }
+    const key = `${item.fcstDate}-${item.fcstTime}`;
+    if (!candidates.has(key)) {
+      candidates.set(key, date);
+    }
+  }
+
+  if (!candidates.size) {
+    return null;
+  }
+
+  const now = new Date();
+  let bestFuture: { key: string; date: Date; diff: number } | null = null;
+  let bestPast: { key: string; date: Date; diff: number } | null = null;
+
+  for (const [key, date] of candidates.entries()) {
+    const diff = date.getTime() - now.getTime();
+    if (diff >= 0) {
+      if (!bestFuture || diff < bestFuture.diff) {
+        bestFuture = { key, date, diff };
+      }
+    } else {
+      const abs = Math.abs(diff);
+      if (!bestPast || abs < bestPast.diff) {
+        bestPast = { key, date, diff: abs };
+      }
+    }
+  }
+
+  const chosen = bestFuture ?? bestPast;
+  if (!chosen) {
+    return null;
+  }
+
+  const [fcstDate, fcstTime] = chosen.key.split('-');
+  return { fcstDate, fcstTime };
+}
+
+function parseForecastDateTime(fcstDate?: string, fcstTime?: string) {
+  if (!fcstDate || !fcstTime || fcstDate.length !== 8 || fcstTime.length !== 4) {
+    return null;
+  }
+  const year = Number(fcstDate.slice(0, 4));
+  const month = Number(fcstDate.slice(4, 6)) - 1;
+  const day = Number(fcstDate.slice(6, 8));
+  const hour = Number(fcstTime.slice(0, 2));
+  const minute = Number(fcstTime.slice(2, 4));
+
+  if ([year, month, day, hour, minute].some(Number.isNaN)) {
+    return null;
+  }
+  return new Date(year, month, day, hour, minute);
 }
 
 onMounted(() => {
