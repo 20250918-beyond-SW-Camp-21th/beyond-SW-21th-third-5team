@@ -8,8 +8,15 @@
       <component :is="cardContent.icon" class="w-6 h-6 text-[#6AA9FF]" />
     </div>
 
-    <p class="text-[#1F2A37] font-semibold mb-2">{{ cardContent.highlight }}</p>
-    <p class="text-[#6B7280] text-sm">{{ cardContent.description }}</p>
+    <p v-if="cardContent.highlight" class="text-[#1F2A37] font-semibold mb-2">
+      {{ cardContent.highlight }}
+    </p>
+    <p
+      class="text-[#6B7280] text-sm"
+      :class="props.type === 'map' ? 'whitespace-pre-line leading-relaxed' : ''"
+    >
+      {{ cardContent.description }}
+    </p>
   </div>
 </template>
 
@@ -40,10 +47,15 @@ function handleClick() {
 }
 
 const cardContent = computed(() => {
-  if (props.type === 'tomorrow' && props.content) {
+  if (props.content) {
+    const iconByType = {
+      tomorrow: Sun,
+      week: CalendarRange,
+      map: MapPin,
+    } as const;
     return {
       ...props.content,
-      icon: Sun,
+      icon: iconByType[props.type],
     };
   }
   switch (props.type) {
