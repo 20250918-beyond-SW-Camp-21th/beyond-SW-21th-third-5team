@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white rounded-[28px] p-6 shadow-lg shadow-blue-100/50 h-full">
+  <div class="bg-white rounded-[28px] p-6 shadow-lg shadow-blue-100/50 h-full" :class="{ 'cursor-pointer hover:shadow-blue-200/70': isClickable }" @click="handleClick">
     <div class="flex items-center justify-between mb-4">
       <div>
         <p class="text-[#6B7280] text-sm">{{ cardContent.subtitle }}</p>
@@ -16,12 +16,36 @@
 <script setup lang="ts">
 import { CalendarRange, MapPin, Sun } from 'lucide-vue-next';
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 
 type PreviewType = 'tomorrow' | 'week' | 'map';
 
-const props = defineProps<{ type: PreviewType }>();
+type PreviewContent = {
+  title: string;
+  subtitle: string;
+  highlight: string;
+  description: string;
+};
+
+const props = defineProps<{ type: PreviewType; content?: PreviewContent | null }>();
+
+const router = useRouter();
+const isClickable = computed(() => props.type === 'week' || props.type === 'map');
+
+function handleClick() {
+  if (!isClickable.value) {
+    return;
+  }
+  router.push({ name: props.type === 'week' ? 'weekly' : 'map' });
+}
 
 const cardContent = computed(() => {
+  if (props.type === 'tomorrow' && props.content) {
+    return {
+      ...props.content,
+      icon: Sun,
+    };
+  }
   switch (props.type) {
     case 'tomorrow':
       return {

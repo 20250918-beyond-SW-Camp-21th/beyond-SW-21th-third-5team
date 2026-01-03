@@ -5,10 +5,6 @@
         <h3 class="text-[#1F2A37] text-xl">시간대별 기상 온도</h3>
         <p class="text-[#6B7280] text-sm">기상 온도를 확인하고 옷을 신경써보세요 </p>
       </div>
-      <div class="flex items-center gap-2 bg-[#F6FAFF] px-3 py-2 rounded-xl border border-[#E6EEF9]">
-        <span class="text-sm text-[#6B7280]">서울</span>
-        <ChevronDown class="w-4 h-4" />
-      </div>
     </div>
 
     <div class="grid grid-cols-4 gap-4">
