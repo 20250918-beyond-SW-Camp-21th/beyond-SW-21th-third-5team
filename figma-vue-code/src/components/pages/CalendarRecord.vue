@@ -1,210 +1,336 @@
 <template>
   <main class="max-w-[1440px] mx-auto px-20 py-8">
-    <div class="bg-white rounded-[28px] p-8 shadow-lg shadow-blue-100/50 mb-8">
-      <div class="flex items-center justify-between mb-6">
-        <h3 class="text-[#1F2A37]">이번 달 요약</h3>
-        <button class="px-6 py-3 bg-[#6AA9FF] text-white rounded-2xl hover:bg-[#5B98EF] transition-all shadow-lg shadow-blue-200/50 font-semibold flex items-center gap-2">
-          <Plus class="w-5 h-5" />
-          오늘 기록 추가
-        </button>
-      </div>
-
-      <div class="flex gap-4">
-        <div class="bg-[#F0F8FF] px-5 py-3 rounded-2xl border border-[#E6EEF9]"><span class="text-sm text-[#6B7280]">기록</span><span class="ml-2 font-semibold text-[#1F2A37]">12일</span></div>
-        <div class="bg-[#FFF5F8] px-5 py-3 rounded-2xl border border-[#FFE8F0]"><span class="text-sm text-[#6B7280]">가장 많이 입은 옷</span><span class="ml-2 font-semibold text-[#1F2A37]">패딩</span></div>
-        <div class="bg-[#F6FAFF] px-5 py-3 rounded-2xl border border-[#E6EEF9]"><span class="text-sm text-[#6B7280]">가장 추웠던 날</span><span class="ml-2 font-semibold text-[#1F2A37]">-3°C</span></div>
-      </div>
-    </div>
 
     <div class="grid grid-cols-2 gap-6 mb-8">
-      <div class="bg-white rounded-[28px] p-8 shadow-lg shadow-blue-100/50">
+      <section class="bg-white rounded-[28px] p-8 shadow-lg shadow-blue-100/50">
         <div class="flex items-center justify-between mb-6">
-          <h3 class="text-[#1F2A37]">2025년 12월</h3>
-          <div class="flex gap-2">
-            <button class="w-10 h-10 bg-[#F6FAFF] rounded-xl hover:bg-[#EAF2FF] transition-all flex items-center justify-center">
-              <ChevronLeft class="w-5 h-5 text-[#6B7280]" />
+          <h3 class="text-[#1F2A37] text-lg font-semibold">내 기록</h3>
+        </div>
+
+        <div v-if="records.length === 0" class="text-[#9CA3AF]">
+          아직 등록한 기록이 없습니다.
+        </div>
+        <div v-else>
+          <div class="recordGrid">
+            <button
+                v-for="r in pageItems"
+                :key="r.id"
+                type="button"
+                class="recordCard"
+                @click="openDetailModal(r)"
+            >
+              <img
+                  v-if="r.photoUrl"
+                  :src="r.photoUrl"
+                  class="recordImage"
+                  alt="ootd"
+              />
+              <div v-else class="recordEmpty">No Image</div>
             </button>
-            <button class="w-10 h-10 bg-[#F6FAFF] rounded-xl hover:bg-[#EAF2FF] transition-all flex items-center justify-center">
-              <ChevronRight class="w-5 h-5 text-[#6B7280]" />
+          </div>
+
+          <div class="pagination">
+            <button
+                type="button"
+                class="pageBtn"
+                :disabled="page === 1"
+                @click="page--"
+            >
+              이전
+            </button>
+
+            <button
+                type="button"
+                class="pageBtn"
+                :disabled="page === totalPages"
+                @click="page++"
+            >
+              다음
             </button>
           </div>
         </div>
 
-        <div class="grid grid-cols-7 gap-2">
-          <div v-for="day in weekDays" :key="day" class="text-center text-sm text-[#6B7280] font-medium py-2">{{ day }}</div>
 
-          <template v-for="(day, index) in calendarDays" :key="`${day ?? 'empty'}-${index}`">
-            <div v-if="day === null" />
-            <button
-              v-else
-              type="button"
-              :class="calendarButtonClass(day)"
-              class="aspect-square rounded-2xl p-2 transition-all relative"
-              @click="selectedDate = day"
-            >
-              <span class="block text-sm">{{ day }}</span>
-              <span v-if="findRecord(day)" class="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
-                <span class="inline-block w-1 h-1 bg-[#6AA9FF] rounded-full" />
-                <span class="text-xs">{{ findRecord(day)?.icon }}</span>
-              </span>
-            </button>
-          </template>
-        </div>
-      </div>
+
+      </section>
 
       <div class="bg-white rounded-[28px] p-8 shadow-lg shadow-blue-100/50">
-        <h3 class="text-[#1F2A37] mb-6">12월 {{ selectedDate }}일 기록</h3>
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-[#1F2A37] text-lg font-semibold">
+            {{ today }}의 OOTD
+          </h3>
+
+          <button
+              type="button"
+              class="px-4 py-2 rounded-xl text-sm font-medium
+                   bg-[#6AA9FF] text-white
+                   hover:bg-[#4F8FFF] transition-colors"
+              @click="openReviewModal"
+          >
+            리뷰 등록
+          </button>
+        </div>
 
         <div class="bg-[#F6FAFF] rounded-2xl p-4 mb-6 border border-[#E6EEF9]">
           <div class="flex items-center gap-3 mb-2">
             <span class="text-2xl">⚡</span>
             <div>
-              <div class="text-[#1F2A37] font-semibold">그날 기온 18°C</div>
-              <div class="text-sm text-[#6B7280]">체감 16°C · 번개</div>
+              <div class="text-[#1F2A37] font-semibold">오늘의 기온 {{ todayTemp }}°C</div>
+              <div class="text-sm text-[#6B7280]">{{ Weather }}</div>
             </div>
           </div>
         </div>
 
-        <div class="mb-6">
-          <label class="block text-[#1F2A37] mb-3">입었던 옷</label>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="outfit in outfitOptions"
-              :key="outfit"
-              type="button"
-              class="px-4 py-2 rounded-xl transition-all"
-              :class="selectedOutfits.includes(outfit) ? 'bg-[#6AA9FF] text-white' : 'bg-[#F6FAFF] text-[#6B7280] hover:bg-[#EAF2FF]'"
-              @click="toggleOutfit(outfit)"
+        <section class="bottom">
+          <!-- 사진 -->
+          <div class="box left">
+            <img
+                v-if="photoUrl"
+                :src="photoUrl"
+                class="photo"
+            />
+            <div
+                v-else
+                class="photo-placeholder"
             >
-              {{ outfit }}
-            </button>
+              사진 없음
+            </div>
           </div>
-        </div>
 
-        <div class="mb-6">
-          <label class="block text-[#1F2A37] mb-3">만족도</label>
-          <div class="flex gap-3">
-            <button
-              type="button"
-              class="flex-1 py-3 rounded-2xl transition-all"
-              :class="satisfaction === 'cold' ? 'bg-[#6AA9FF] text-white' : 'bg-[#F6FAFF] text-[#6B7280] hover:bg-[#EAF2FF]'"
-              @click="satisfaction = 'cold'"
-            >
-              ❄️ 추웠어요
-            </button>
-            <button
-              type="button"
-              class="flex-1 py-3 rounded-2xl transition-all"
-              :class="satisfaction === 'good' ? 'bg-[#6AA9FF] text-white' : 'bg-[#F6FAFF] text-[#6B7280] hover:bg-[#EAF2FF]'"
-              @click="satisfaction = 'good'"
-            >
-              👍 딱 좋아요
-            </button>
-            <button
-              type="button"
-              class="flex-1 py-3 rounded-2xl transition-all"
-              :class="satisfaction === 'hot' ? 'bg-[#6AA9FF] text-white' : 'bg-[#F6FAFF] text-[#6B7280] hover:bg-[#EAF2FF]'"
-              @click="satisfaction = 'hot'"
-            >
-              🔥 더웠어요
-            </button>
+          <div class="right">
+            <!-- 만족도 -->
+            <div class="box rightTop">
+              <p class="label">{{ score }}</p>
+            </div>
+
+            <!-- 후기 -->
+            <div class="box rightBottom">
+              <p class="label">후기</p>
+              <p class="review">
+                {{ review }}
+              </p>
+            </div>
           </div>
-        </div>
-
-        <div class="mb-6">
-          <label class="block text-[#1F2A37] mb-3">메모</label>
-          <textarea
-            class="w-full h-24 px-4 py-3 bg-[#F6FAFF] border border-[#E6EEF9] rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-[#6AA9FF] placeholder:text-[#6B7280]"
-            placeholder="오늘의 체감이나 메모를 기록하세요"
-          ></textarea>
-        </div>
-
-        <div class="flex gap-3">
-          <button class="flex-1 py-3 bg-[#6AA9FF] text-white rounded-2xl hover:bg-[#5B98EF] transition-all shadow-lg shadow-blue-200/50 font-semibold">
-            저장하기
-          </button>
-          <button class="w-12 h-12 bg-[#F6FAFF] rounded-2xl border border-[#E6EEF9] flex items-center justify-center">
-            <Upload class="w-5 h-5 text-[#6B7280]" />
-          </button>
-          <button class="w-12 h-12 bg-[#FFF5F8] rounded-2xl border border-[#FFE8F0] flex items-center justify-center">
-            <Trash2 class="w-5 h-5 text-[#FF9BCB]" />
-          </button>
-        </div>
+        </section>
       </div>
     </div>
+    <ReviewModal
+        v-if="isReviewModalOpen"
+        @close="closeReviewModal"
+    />
 
-    <div class="bg-white rounded-[28px] p-8 shadow-lg shadow-blue-100/50">
-      <h3 class="text-[#1F2A37] mb-6">최근 기록</h3>
-      <div class="space-y-3">
-        <div
-          v-for="record in recentRecords"
-          :key="record.date"
-          class="flex items-center justify-between bg-[#F6FAFF] rounded-2xl px-4 py-3"
-        >
-          <div>
-            <div class="text-[#1F2A37] font-semibold">{{ record.date }}</div>
-            <div class="text-sm text-[#6B7280]">{{ record.note }}</div>
-          </div>
-          <span class="text-[#6B7280]">{{ record.temp }}</span>
-        </div>
-      </div>
-    </div>
+    <OotdDetailModal
+        v-if="isDetailModalOpen"
+        :detail="selectedDetail"
+        @close="closeDetailModal"
+    />
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Upload } from 'lucide-vue-next';
+  import { computed, ref } from 'vue';
+  import ReviewModal from "../ootd/ReviewModal.vue";
 
-type Satisfaction = 'cold' | 'good' | 'hot';
+  const today = new Date().toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 
-const selectedDate = ref(29);
-const selectedOutfits = ref<string[]>(['가디건', '긴바지']);
-const satisfaction = ref<Satisfaction>('good');
+  const todayTemp = ref(null)
+  const Weather = ref(null)
+  const score = ref(null)
+  const ootd = ref(null)
+  const review = ref(null)
 
-const outfitOptions = ['가디건', '자켓', '코트', '패딩', '반팔', '긴팔', '긴바지', '반바지', '치마', '운동화', '부츠'];
+  const isReviewModalOpen = ref(false)
+  const openReviewModal = () => (isReviewModalOpen.value = true)
+  const closeReviewModal = () => (isReviewModalOpen.value = false)
 
-const recordedDates = [
-  { date: 15, temp: 12, icon: '🧥' },
-  { date: 20, temp: 18, icon: '👕' },
-  { date: 25, temp: -3, icon: '🧥' },
-  { date: 29, temp: 18, icon: '⚡' },
-];
+  /*const goDetail = (id) => {
+    router.push({ name: 'ootd-detail', params: { id } })
+  }*/
 
-const recentRecords = [
-  { date: '12월 25일', temp: '-3°C', note: '너무 추웠어요. 패딩 필수!' },
-  { date: '12월 20일', temp: '18°C', note: '딱 좋은 날씨. 가디건 하나면 충분' },
-  { date: '12월 15일', temp: '12°C', note: '자켓 입고 나갔는데 괜찮았음' },
-];
+  const page = ref(1)
+  const pageSize = 16 //
 
-const daysInMonth = 31;
-const startDay = 0;
-const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+  const total = computed(() => records.value.length)
+  const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
 
-const calendarDays = computed(() => {
-  return Array.from({ length: startDay }, () => null as number | null).concat(
-    Array.from({ length: daysInMonth }, (_, i) => i + 1)
-  );
-});
+  const startIndex = computed(() => (page.value - 1) * pageSize)
+  const endIndex = computed(() => Math.min(total.value, startIndex.value + pageSize))
 
-function toggleOutfit(outfit: string) {
-  if (selectedOutfits.value.includes(outfit)) {
-    selectedOutfits.value = selectedOutfits.value.filter(o => o !== outfit);
-  } else {
-    selectedOutfits.value = [...selectedOutfits.value, outfit];
+  const pageItems = computed(() =>
+      records.value.slice(startIndex.value, endIndex.value)
+  )
+
+  const pagesToShow = computed(() => {
+    const maxButtons = 5
+    const tp = totalPages.value
+    const cur = page.value
+
+    let start = Math.max(1, cur - Math.floor(maxButtons / 2))
+    let end = Math.min(tp, start + maxButtons - 1)
+    start = Math.max(1, end - maxButtons + 1)
+
+    const arr = []
+    for (let p = start; p <= end; p++) arr.push(p)
+    return arr
+  })
+
+  /** 이동 */
+  const goDetail = (id) => {
+    router.push({ name: 'ootd-detail', params: { id } })
   }
-}
 
-function findRecord(day: number) {
-  return recordedDates.find(r => r.date === day);
-}
+  /** util */
+  const formatDate = (iso) => {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return iso
+    return d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
+  }
 
-function calendarButtonClass(day: number) {
-  const hasRecord = findRecord(day);
-  const isSelected = day === selectedDate.value;
+  const feelingLabel = (v) => {
+    if (v === 'COLD') return '춥다'
+    if (v === 'GOOD') return '좋았다'
+    if (v === 'HOT') return '덥다'
+    return v
+  }
 
-  if (isSelected) return 'bg-[#EAF2FF] text-[#1F2A37] font-semibold shadow-md';
-  if (hasRecord) return 'bg-[#F6FAFF] text-[#1F2A37] hover:bg-[#EAF2FF]';
-  return 'text-[#6B7280] hover:bg-[#F6FAFF]';
-}
+  const records = ref([
+    { id: 1, photoUrl: 'https://picsum.photos/300/300?random=1' },
+    { id: 2, photoUrl: 'https://picsum.photos/300/300?random=2' },
+    { id: 3, photoUrl: 'https://picsum.photos/300/300?random=3' },
+    { id: 4, photoUrl: 'https://picsum.photos/300/300?random=4' },
+
+    { id: 5, photoUrl: 'https://picsum.photos/300/300?random=5' },
+    { id: 6, photoUrl: 'https://picsum.photos/300/300?random=6' },
+    { id: 7, photoUrl: 'https://picsum.photos/300/300?random=7' },
+    { id: 8, photoUrl: 'https://picsum.photos/300/300?random=8' },
+
+    { id: 9, photoUrl: 'https://picsum.photos/300/300?random=9' },
+    { id: 10, photoUrl: 'https://picsum.photos/300/300?random=10' },
+    { id: 11, photoUrl: 'https://picsum.photos/300/300?random=11' },
+    { id: 12, photoUrl: 'https://picsum.photos/300/300?random=12' },
+
+    { id: 13, photoUrl: 'https://picsum.photos/300/300?random=13' },
+    { id: 14, photoUrl: 'https://picsum.photos/300/300?random=14' },
+    { id: 15, photoUrl: 'https://picsum.photos/300/300?random=15' },
+    { id: 16, photoUrl: 'https://picsum.photos/300/300?random=16' }
+  ])
+
+  import OotdDetailModal from '../ootd/OotdDetailModal.vue'
+
+  const isDetailModalOpen = ref(false)
+  const selectedDetail = ref({
+    id: 0,
+    photoUrl: null as string | null,
+    date: '',
+    feeling: 'GOOD' as 'COLD' | 'GOOD' | 'HOT',
+    review: '',
+  })
+
+  const openDetailModal = (record: { id: number; photoUrl: string }) => {
+    // 지금은 API 없이 예시 데이터로 채움 (나중에 DB 조회로 교체)
+    selectedDetail.value = {
+      id: record.id,
+      photoUrl: record.photoUrl,
+      date: '2026-01-02',
+      feeling: 'GOOD',
+      review: '이 날은 체감이 딱 좋아서 만족했습니다.',
+    }
+    isDetailModalOpen.value = true
+  }
+
+  const closeDetailModal = () => (isDetailModalOpen.value = false)
+
 </script>
+<style>
+.content {
+display: grid;
+grid-template-columns: 320px 1fr;
+gap: 36px;
+}
+
+
+.photoBox {
+min-height: 320px;
+background: #f3f4f6;
+border-radius: 20px;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+
+
+.right {
+display: grid;
+grid-template-rows: 120px 1fr;
+}
+
+.satisfactionBox {
+min-height: 120px;
+background: #fff;
+border-radius: 20px;
+padding: 20px;
+}
+
+.reviewBox {
+min-height: 200px;
+background: #fff;
+border-radius: 20px;
+padding: 20px;
+}
+
+.pageBtn{
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-weight: 800;
+}
+.pageBtn:disabled{ opacity: 0.45; cursor: not-allowed; }
+
+.recordGrid{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* ✅ 4칸 고정 */
+  gap: 16px;
+  width: 100%;
+}
+
+.recordCard{
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1; /* ✅ 정사각형 */
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+}
+
+.recordImage{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recordEmpty{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.pagination{
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+</style>

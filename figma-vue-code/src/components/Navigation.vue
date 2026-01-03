@@ -66,3 +66,91 @@ const emit = defineEmits<{ 'tab-change': [tab: PageKey] }>();
 
 const activeTab = computed(() => props.activeTab ?? '오늘의 날씨');
 </script>
+
+<style scoped>
+.wrapper{
+  background: #fff;
+  border-radius: 36px;
+  padding: 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.title{
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 28px;
+}
+
+.tempCard{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f6faff;
+  border-radius: 24px;
+  padding: 22px 26px;
+  margin-bottom: 36px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.icon{
+  font-size: 26px;
+}
+
+.content{
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 36px;
+}
+
+.photoBox{
+  height: 340px;
+  border-radius: 20px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+.photoEmpty{
+  color: #9ca3af;
+}
+
+.right{
+  display: grid;
+  grid-template-rows: 110px 1fr;
+  gap: 24px;
+}
+
+.satisfactionBox,
+.reviewBox{
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+}
+
+.label{
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.score{
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.review{
+  font-size: 16px;
+  line-height: 1.6;
+}
+</style>
