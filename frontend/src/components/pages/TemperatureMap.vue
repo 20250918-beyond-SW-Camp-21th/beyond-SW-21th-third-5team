@@ -4,7 +4,6 @@
       <div class="bg-white rounded-[28px] p-8 shadow-lg shadow-blue-100/50 relative min-h-[700px]">
         <h3 class="text-[#1F2A37] mb-6">대한민국 기온 지도</h3>
         <div
-          ref="mapRef"
           class="relative w-full max-w-[720px] bg-gradient-to-br from-[#F0F8FF] to-[#E6F3FF] rounded-3xl select-none mx-auto"
           style="aspect-ratio: 2 / 3;"
         >
@@ -15,7 +14,7 @@
           />
 
           <div
-            v-for="city in cities"
+            v-for="city in visibleCities"
             :key="city.name"
             class="absolute"
             :style="{ top: city.position.top, left: city.position.left }"
@@ -25,14 +24,17 @@
               class="group relative"
               :class="selectedCity === city.name ? 'z-20' : 'z-10'"
               @click="selectedCity = city.name"
-              @mousedown="startDrag(city, $event)"
-              @touchstart.prevent="startDrag(city, $event)"
             >
               <span
                 class="flex h-12 w-12 items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-110"
                 :class="[tempColor(city.temp), selectedCity === city.name ? 'ring-4 ring-[#6AA9FF] ring-opacity-50' : '']"
               >
                 <span class="text-sm font-semibold text-[#1F2A37]">{{ city.temp }}°C</span>
+              </span>
+              <span
+                class="absolute -top-2 right-0 bg-white/80 border border-[#E6EEF9] text-[#1F2A37] text-xs px-2 py-1 rounded-full shadow-sm"
+              >
+                {{ formatPercent(city.pop) }}
               </span>
               <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap block">
                 <span class="text-xs font-medium text-[#6B7280]">{{ city.name }}</span>
@@ -43,37 +45,37 @@
       </div>
 
       <div class="space-y-6">
-        <div class="bg-white rounded-[28px] p-6 shadow-lg shadow-blue-100/50">
-          <h4 class="text-[#1F2A37] mb-4">필터</h4>
-          <div class="mb-6">
-            <label class="block text-sm text-[#6B7280] mb-2">표시 온도</label>
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                v-for="mode in temperatureModes"
-                :key="mode.value"
-                type="button"
-                class="py-2 px-3 rounded-xl transition-all"
-                :class="tempMode === mode.value ? 'bg-[#6AA9FF] text-white' : 'bg-[#F6FAFF] text-[#6B7280] hover:bg-[#EAF2FF]'"
-                @click="tempMode = mode.value"
-              >
-                {{ mode.label }}
-              </button>
+        <div class="bg-gradient-to-br from-[#F0F8FF] to-[#E6F3FF] rounded-[28px] p-6 shadow-lg shadow-blue-100/50">
+          <div class="flex items-start gap-3 mb-4">
+            <MapPin class="w-6 h-6 text-[#6AA9FF]" />
+            <div class="flex-1">
+              <h4 class="text-[#1F2A37] mb-1">{{ currentCity.name }}</h4>
+              <div class="text-3xl font-bold text-[#1F2A37] mb-2">{{ currentCity.temp }}°C</div>
+            </div>
+            <img :src="mascotSrc" alt="마스코트" class="w-12 h-12 object-contain" />
+          </div>
+
+          <div class="space-y-2 mb-4">
+            <div class="flex items-center gap-2 text-sm">
+              <Wind class="w-4 h-4 text-[#6B7280]" />
+              <span class="text-[#6B7280]">바람</span>
+              <span class="text-[#1F2A37] font-medium">{{ formatWind(currentCity.wsd) }}</span>
+            </div>
+            <div class="flex items-center gap-2 text-sm">
+              <Droplets class="w-4 h-4 text-[#6B7280]" />
+              <span class="text-[#6B7280]">습도</span>
+              <span class="text-[#1F2A37] font-medium">{{ formatPercent(currentCity.reh) }}</span>
+            </div>
+            <div class="flex items-center gap-2 text-sm">
+              <CloudRain class="w-4 h-4 text-[#6B7280]" />
+              <span class="text-[#6B7280]">강수확률</span>
+              <span class="text-[#1F2A37] font-medium">{{ formatPercent(currentCity.pop) }}</span>
             </div>
           </div>
 
-          <div class="flex items-center justify-between">
-            <label class="text-sm text-[#6B7280]">옷차림 아이콘 표시</label>
-            <button
-              type="button"
-              class="w-12 h-6 rounded-full transition-all"
-              :class="showOutfitIcons ? 'bg-[#6AA9FF]' : 'bg-[#E6EEF9]'"
-              @click="showOutfitIcons = !showOutfitIcons"
-            >
-              <span
-                class="block w-5 h-5 bg-white rounded-full shadow-sm transition-transform"
-                :class="showOutfitIcons ? 'translate-x-6' : 'translate-x-1'"
-              />
-            </button>
+          <div class="bg-white/80 rounded-2xl p-4">
+            <div class="text-sm text-[#6B7280] mb-1">추천 옷차림</div>
+            <div class="text-[#1F2A37] font-medium">{{ currentCity.outfit }}</div>
           </div>
         </div>
 
@@ -87,40 +89,11 @@
           </div>
         </div>
 
-        <div class="bg-gradient-to-br from-[#F0F8FF] to-[#E6F3FF] rounded-[28px] p-6 shadow-lg shadow-blue-100/50">
-          <div class="flex items-start gap-3 mb-4">
-            <MapPin class="w-6 h-6 text-[#6AA9FF]" />
-            <div class="flex-1">
-              <h4 class="text-[#1F2A37] mb-1">{{ currentCity.name }}</h4>
-              <div class="text-3xl font-bold text-[#1F2A37] mb-2">{{ currentCity.temp }}°C</div>
-            </div>
-            <div class="text-4xl">🐧</div>
-          </div>
-
-          <div class="space-y-2 mb-4">
-            <div class="flex items-center gap-2 text-sm">
-              <Wind class="w-4 h-4 text-[#6B7280]" />
-              <span class="text-[#6B7280]">바람</span>
-              <span class="text-[#1F2A37] font-medium">3m/s</span>
-            </div>
-            <div class="flex items-center gap-2 text-sm">
-              <Droplets class="w-4 h-4 text-[#6B7280]" />
-              <span class="text-[#6B7280]">습도</span>
-              <span class="text-[#1F2A37] font-medium">45%</span>
-            </div>
-          </div>
-
-          <div class="bg-white/80 rounded-2xl p-4">
-            <div class="text-sm text-[#6B7280] mb-1">추천 옷차림</div>
-            <div class="text-[#1F2A37] font-medium">{{ currentCity.outfit }}</div>
-          </div>
-        </div>
-
         <div class="bg-white rounded-[28px] p-6 shadow-lg shadow-blue-100/50">
           <h4 class="text-[#1F2A37] mb-4">인기 지역 빠른 선택</h4>
           <div class="flex flex-wrap gap-2">
             <button
-              v-for="city in popularCities"
+              v-for="city in loadedPopularCities"
               :key="city"
               type="button"
               class="px-4 py-2 rounded-xl transition-all"
@@ -137,26 +110,60 @@
 </template>
 
 <script setup lang="ts">
-import { Droplets, MapPin, Wind } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, ref } from 'vue';
+import axios from 'axios';
+import { CloudRain, Droplets, MapPin, Wind } from 'lucide-vue-next';
+import { computed, onMounted, ref } from 'vue';
 import koreaMap from '../../assets/images/korea-map.png';
 
-type TempMode = 'current' | 'feels' | 'high' | 'low';
+type SidoWeatherPayload = {
+  temperature?: number | null;
+  pop?: number | null;
+  wsd?: number | null;
+  reh?: number | null;
+  recommnededOutfit?: string;
+};
+
+type FetchResult = {
+  sido: string;
+  payload: SidoWeatherPayload | null;
+  error: boolean;
+};
 
 interface City {
   name: string;
   temp: number;
   position: { top: string; left: string };
   outfit: string;
+  pop?: number | null;
+  wsd?: number | null;
+  reh?: number | null;
 }
 
+const SIDO_ORDER = [
+  '서울',
+  '부산',
+  '대구',
+  '인천',
+  '광주',
+  '대전',
+  '울산',
+  '세종',
+  '경기',
+  '강원',
+  '충북',
+  '충남',
+  '전북',
+  '전남',
+  '경북',
+  '경남',
+  '제주',
+];
+
 const selectedCity = ref('서울');
-const showOutfitIcons = ref(true);
-const tempMode = ref<TempMode>('current');
-const mapRef = ref<HTMLElement | null>(null);
-const draggingCity = ref<City | null>(null);
-const dragOffset = ref({ x: 0, y: 0 });
-const previousUserSelect = ref('');
+const weatherBySido = ref<Record<string, SidoWeatherPayload>>({});
+const loadedOrder = ref<string[]>([]);
+const cacheKey = 'weather-sido-cache';
+const mascotSrc = new URL('../../assets/images/마스코트.png', import.meta.url).href;
 
 const cities = ref<City[]>([
   { name: '서울', temp: 18, position: { top: '15.895806520806522%', left: '30.378257722007724%' }, outfit: '가디건 + 긴바지' },
@@ -178,14 +185,7 @@ const cities = ref<City[]>([
   { name: '제주', temp: 24, position: { top: '90.51627727470013%', left: '19.318181818181817%' }, outfit: '반팔 + 반바지' },
 ]);
 
-const temperatureModes = [
-  { value: 'current' as TempMode, label: '현재' },
-  { value: 'feels' as TempMode, label: '체감' },
-  { value: 'high' as TempMode, label: '최고' },
-  { value: 'low' as TempMode, label: '최저' },
-];
-
-const popularCities = cities.value.map(city => city.name);
+const popularCities = ['서울', '경기', '대전', '부산', '제주'];
 
 const legends = [
   { range: '0~5°C', color: 'bg-blue-400' },
@@ -196,71 +196,37 @@ const legends = [
   { range: '28°C+', color: 'bg-red-300' },
 ];
 
-const currentCity = computed(() => cities.value.find(city => city.name === selectedCity.value) ?? cities.value[0]);
+const visibleCities = computed(() => {
+  if (!loadedOrder.value.length) return [];
+  const orderSet = new Set(loadedOrder.value);
+  return cities.value.filter((city) => orderSet.has(city.name));
+});
+
+const loadedPopularCities = computed(() => {
+  if (!loadedOrder.value.length) return [];
+  const orderSet = new Set(loadedOrder.value);
+  return popularCities.filter((city) => orderSet.has(city));
+});
+
+const currentCity = computed(() => {
+  if (!loadedOrder.value.length) {
+    return cities.value[0];
+  }
+  const fallbackName = loadedOrder.value[0];
+  const fallback = cities.value.find((city) => city.name === fallbackName) ?? cities.value[0];
+  return loadedOrder.value.includes(selectedCity.value)
+    ? cities.value.find((city) => city.name === selectedCity.value) ?? fallback
+    : fallback;
+});
 
 if (import.meta.env.DEV) {
   (window as Window & { __temperatureMapCities?: City[] }).__temperatureMapCities = cities.value;
 }
 
-function getClientPoint(event: MouseEvent | TouchEvent) {
-  if ('touches' in event && event.touches.length > 0) {
-    return { x: event.touches[0].clientX, y: event.touches[0].clientY };
-  }
-  const mouseEvent = event as MouseEvent;
-  return { x: mouseEvent.clientX, y: mouseEvent.clientY };
-}
-
-function startDrag(city: City, event: MouseEvent | TouchEvent) {
-  if (!mapRef.value) return;
-  selectedCity.value = city.name;
-  draggingCity.value = city;
-
-  const mapRect = mapRef.value.getBoundingClientRect();
-  const target = event.currentTarget as HTMLElement | null;
-  const targetRect = target?.getBoundingClientRect();
-  const point = getClientPoint(event);
-  dragOffset.value = {
-    x: targetRect ? point.x - (targetRect.left - mapRect.left) : 0,
-    y: targetRect ? point.y - (targetRect.top - mapRect.top) : 0,
-  };
-
-  previousUserSelect.value = document.body.style.userSelect;
-  document.body.style.userSelect = 'none';
-
-  window.addEventListener('mousemove', handleDragMove);
-  window.addEventListener('mouseup', stopDrag);
-  window.addEventListener('touchmove', handleDragMove, { passive: false });
-  window.addEventListener('touchend', stopDrag);
-}
-
-function handleDragMove(event: MouseEvent | TouchEvent) {
-  if (!draggingCity.value || !mapRef.value) return;
-  if ('touches' in event) event.preventDefault();
-
-  const mapRect = mapRef.value.getBoundingClientRect();
-  const point = getClientPoint(event);
-  const x = point.x - mapRect.left - dragOffset.value.x;
-  const y = point.y - mapRect.top - dragOffset.value.y;
-  const left = Math.min(100, Math.max(0, (x / mapRect.width) * 100));
-  const top = Math.min(100, Math.max(0, (y / mapRect.height) * 100));
-
-  draggingCity.value.position.left = `${left}%`;
-  draggingCity.value.position.top = `${top}%`;
-}
-
-function stopDrag() {
-  draggingCity.value = null;
-  document.body.style.userSelect = previousUserSelect.value;
-  window.removeEventListener('mousemove', handleDragMove);
-  window.removeEventListener('mouseup', stopDrag);
-  window.removeEventListener('touchmove', handleDragMove);
-  window.removeEventListener('touchend', stopDrag);
-}
-
-onBeforeUnmount(() => {
-  stopDrag();
+onMounted(() => {
+  console.debug('[TemperatureMap] mounted');
+  void loadSidoWeatherProgressively();
 });
-
 
 function tempColor(temp: number) {
   if (temp <= 5) return 'bg-blue-400';
@@ -269,5 +235,221 @@ function tempColor(temp: number) {
   if (temp <= 22) return 'bg-yellow-300';
   if (temp <= 27) return 'bg-orange-300';
   return 'bg-red-300';
+}
+
+async function loadSidoWeatherProgressively() {
+  console.debug('[TemperatureMap] start load');
+  const base = resolveBaseDateTime();
+  const cachedMap = readCache(base.baseDate, base.baseTime);
+  const staleMap = cachedMap ?? readStaleCache();
+  if (staleMap) {
+    applyCachedData(staleMap);
+  }
+
+  for (let i = 0; i < SIDO_ORDER.length; i += 1) {
+    const sido = SIDO_ORDER[i];
+    if ((cachedMap ?? staleMap)?.[sido]) {
+      continue;
+    }
+
+    console.debug('[TemperatureMap] loading sido', sido);
+    let result: FetchResult;
+    try {
+      const payload = await fetchOneSido(sido, base.baseDate, base.baseTime);
+      result = { sido, payload, error: !payload };
+    } catch {
+      result = { sido, payload: null, error: true };
+    }
+
+    if (!result.payload && (staleMap ?? cachedMap)?.[sido]) {
+      result = { ...result, payload: (staleMap ?? cachedMap)?.[sido] ?? null, error: false };
+    }
+
+    applyBatch([result]);
+    const nextCache = mergeCache(cachedMap ?? staleMap ?? null, [result]);
+    if (nextCache) {
+      writeCache(base.baseDate, base.baseTime, nextCache);
+    }
+    await sleep(1500);
+  }
+}
+
+async function fetchOneSido(sido: string, baseDate: string, baseTime: string) {
+  console.debug('[TemperatureMap] fetchOneSido', sido);
+  try {
+    const { data } = await axios.get('/api/map/sido/one', {
+      params: { sido, baseDate, baseTime },
+    });
+    return unwrapPayload(data);
+  } catch (error) {
+    if (shouldRetry(error)) {
+      await sleep(600);
+      const { data } = await axios.get('/api/map/sido/one', {
+        params: { sido, baseDate, baseTime },
+      });
+      return unwrapPayload(data);
+    }
+    throw error;
+  }
+}
+
+function unwrapPayload(data: any): SidoWeatherPayload | null {
+  const candidate = data && typeof data === 'object' && 'success' in data && 'data' in data ? data.data : data;
+  if (!candidate || typeof candidate !== 'object') return null;
+  return {
+    temperature: candidate.temperature ?? null,
+    pop: candidate.pop ?? null,
+    wsd: candidate.wsd ?? null,
+    reh: candidate.reh ?? null,
+    recommnededOutfit: candidate.recommnededOutfit ?? null,
+  };
+}
+
+function applyCachedData(cachedMap: Record<string, SidoWeatherPayload>) {
+  Object.entries(cachedMap).forEach(([sido, payload]) => {
+    if (payload) {
+      applySidoPayload(sido, payload);
+    }
+    pushLoadedOrder(sido);
+  });
+}
+
+function applyBatch(results: FetchResult[]) {
+  results.forEach((result) => {
+    if (result.payload) {
+      applySidoPayload(result.sido, result.payload);
+    }
+    pushLoadedOrder(result.sido);
+  });
+}
+
+function applySidoPayload(sido: string, payload: SidoWeatherPayload) {
+  weatherBySido.value = {
+    ...weatherBySido.value,
+    [sido]: payload,
+  };
+  cities.value = cities.value.map((city) => {
+    if (city.name !== sido) return city;
+    const nextTemp = payload.temperature ?? null;
+    const nextPop = payload.pop ?? null;
+    const nextWsd = payload.wsd ?? null;
+    const nextReh = payload.reh ?? null;
+    const nextOutfit = payload.recommnededOutfit ?? null;
+    return {
+      ...city,
+      temp: nextTemp === null ? city.temp : nextTemp,
+      outfit: nextOutfit === null ? city.outfit : nextOutfit,
+      pop: nextPop === null ? city.pop : nextPop,
+      wsd: nextWsd === null ? city.wsd : nextWsd,
+      reh: nextReh === null ? city.reh : nextReh,
+    };
+  });
+}
+
+function pushLoadedOrder(sido: string) {
+  if (!loadedOrder.value.includes(sido)) {
+    loadedOrder.value = [...loadedOrder.value, sido];
+  }
+}
+
+function mergeCache(
+  cachedMap: Record<string, SidoWeatherPayload> | null,
+  results: FetchResult[]
+): Record<string, SidoWeatherPayload> | null {
+  const nextMap = { ...(cachedMap ?? {}) };
+  let updated = false;
+  results.forEach((result) => {
+    if (result.payload) {
+      nextMap[result.sido] = result.payload;
+      updated = true;
+    }
+  });
+  return updated ? nextMap : cachedMap;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetry(error: unknown) {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+  const status = error.response?.status;
+  if (!status) {
+    return true;
+  }
+  return status === 429 || status >= 500;
+}
+
+function formatPercent(value?: number | null) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '--%';
+  }
+  return `${Math.round(value)}%`;
+}
+
+function formatWind(value?: number | null) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '--m/s';
+  }
+  return `${value}m/s`;
+}
+
+function readCache(baseDate: string, baseTime: string) {
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (parsed.baseDate !== baseDate || parsed.baseTime !== baseTime) return null;
+    if (!parsed.data || typeof parsed.data !== 'object') return null;
+    return parsed.data as Record<string, SidoWeatherPayload>;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(baseDate: string, baseTime: string, data: Record<string, SidoWeatherPayload>) {
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify({ baseDate, baseTime, data, savedAt: Date.now() }));
+  } catch {
+    // Ignore storage errors (private mode, quota, etc.).
+  }
+}
+
+function readStaleCache() {
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.data || typeof parsed.data !== 'object') return null;
+    return parsed.data as Record<string, SidoWeatherPayload>;
+  } catch {
+    return null;
+  }
+}
+
+function resolveBaseDateTime() {
+  const now = new Date(Date.now() - 30 * 60 * 1000);
+  const baseTimes = [2300, 2000, 1700, 1400, 1100, 800, 500, 200];
+  const hhmm = now.getHours() * 100 + now.getMinutes();
+  let picked = baseTimes.find((bt) => hhmm >= bt);
+
+  let date = new Date(now);
+  if (!picked) {
+    date.setDate(date.getDate() - 1);
+    picked = 2300;
+  }
+
+  const baseDate = [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('');
+
+  const baseTime = String(picked).padStart(4, '0');
+  return { baseDate, baseTime };
 }
 </script>
