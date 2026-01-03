@@ -17,7 +17,7 @@
                 :key="r.id"
                 type="button"
                 class="recordCard"
-                @click="goDetail(r.id)"
+                @click="openDetailModal(r)"
             >
               <img
                   v-if="r.photoUrl"
@@ -118,6 +118,12 @@
         v-if="isReviewModalOpen"
         @close="closeReviewModal"
     />
+
+    <OotdDetailModal
+        v-if="isDetailModalOpen"
+        :detail="selectedDetail"
+        @close="closeDetailModal"
+    />
   </main>
 </template>
 
@@ -212,6 +218,31 @@
     { id: 15, photoUrl: 'https://picsum.photos/300/300?random=15' },
     { id: 16, photoUrl: 'https://picsum.photos/300/300?random=16' }
   ])
+
+  import OotdDetailModal from '../ootd/OotdDetailModal.vue'
+
+  const isDetailModalOpen = ref(false)
+  const selectedDetail = ref({
+    id: 0,
+    photoUrl: null as string | null,
+    date: '',
+    feeling: 'GOOD' as 'COLD' | 'GOOD' | 'HOT',
+    review: '',
+  })
+
+  const openDetailModal = (record: { id: number; photoUrl: string }) => {
+    // 지금은 API 없이 예시 데이터로 채움 (나중에 DB 조회로 교체)
+    selectedDetail.value = {
+      id: record.id,
+      photoUrl: record.photoUrl,
+      date: '2026-01-02',
+      feeling: 'GOOD',
+      review: '이 날은 체감이 딱 좋아서 만족했습니다.',
+    }
+    isDetailModalOpen.value = true
+  }
+
+  const closeDetailModal = () => (isDetailModalOpen.value = false)
 
 </script>
 <style>
