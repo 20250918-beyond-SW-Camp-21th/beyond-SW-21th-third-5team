@@ -6,7 +6,6 @@ const emit = defineEmits(['close'])
 const emitClose = () => {
   emit('close')
 }
-
 const isSaving = ref(false)
 const errorMsg = ref('')
 
@@ -69,6 +68,49 @@ const saveToDB = async () => {
     isSaving.value = false
   }
 }
+
+import { saveOutfit } from '@/api/outfit/outfit'
+
+const imageUrl = ref('')
+const outfitReview = ref('')
+const date = ref('') // yyyy-MM-dd
+
+const submitReview = async () => {
+  errorMsg.value = ''
+
+  if (!form.review) {
+    errorMsg.value = '후기를 입력해 주세요.'
+    return
+  }
+
+  if (props.weatherNum === null || props.temperature === null) {
+    errorMsg.value = '날씨 정보가 없습니다.'
+    return
+  }
+
+  try {
+    await saveOutfit({
+      weatherNum: props.weatherNum,
+      temperature: props.temperature,
+      date: form.date,
+      imageUrl: imageUrl.value,
+      outfitReview: form.review,
+      satisfaction: form.feeling as 'COLD' | 'GOOD' | 'HOT'
+    })
+
+    emitClose()
+  } catch (e: any) {
+    errorMsg.value = e?.message ?? '저장 실패'
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const props = defineProps<{
+  weatherNum: number
+  temperature: number
+}>()
+
 </script>
 
 <template>
@@ -81,7 +123,7 @@ const saveToDB = async () => {
         <button
             class="saveBtn"
             :disabled="isSaving"
-            @click="saveToDB"
+            @click="submitReview"
         >
           {{ isSaving ? '저장 중...' : '리뷰 저장' }}
         </button>

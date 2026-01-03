@@ -1,6 +1,6 @@
 <template>
   <main class="max-w-[1440px] mx-auto px-20 py-8">
-
+    <TodayWeather @weather-loaded="onWeatherLoaded" style="display:none"/>
     <div class="grid grid-cols-2 gap-6 mb-8">
       <section class="bg-white rounded-[28px] p-8 shadow-lg shadow-blue-100/50">
         <div class="flex items-center justify-between mb-6">
@@ -116,6 +116,8 @@
     </div>
     <ReviewModal
         v-if="isReviewModalOpen"
+        :weatherNum="todayPty"
+        :temperature="todayTmx"
         @close="closeReviewModal"
     />
 
@@ -130,6 +132,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import ReviewModal from "../ootd/ReviewModal.vue";
+import TodayWeather from "../pages/TodayWeather.vue";
 
 const today = new Date().toLocaleDateString('ko-KR', {
   year: 'numeric',
@@ -140,16 +143,11 @@ const today = new Date().toLocaleDateString('ko-KR', {
 const todayTemp = ref(null)
 const Weather = ref(null)
 const score = ref(null)
-const ootd = ref(null)
 const review = ref(null)
 
 const isReviewModalOpen = ref(false)
 const openReviewModal = () => (isReviewModalOpen.value = true)
 const closeReviewModal = () => (isReviewModalOpen.value = false)
-
-/*const goDetail = (id) => {
-  router.push({ name: 'ootd-detail', params: { id } })
-}*/
 
 const page = ref(1)
 const pageSize = 16 //
@@ -244,7 +242,16 @@ const openDetailModal = (record: { id: number; photoUrl: string }) => {
 
 const closeDetailModal = () => (isDetailModalOpen.value = false)
 
+const todayPty = ref<number | null>(1)
+const todayTmx = ref<number | null>(1)
+
+const onWeatherLoaded = (payload: { pty: number; tmx: number }) => {
+  todayPty.value = payload.pty
+  todayTmx.value = payload.tmx
+}
 </script>
+
+
 <style>
 .content {
   display: grid;
