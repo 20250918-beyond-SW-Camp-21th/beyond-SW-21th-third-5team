@@ -1,4 +1,5 @@
-package com.guincard.penghyunsuk.core.domain.outfit;
+/*
+package com.guincard.penghyunsuk.core.domain.outfit.service;
 
 import com.guincard.penghyunsuk.core.api.outfit.outfitrequest.OutFitRequest;
 import com.guincard.penghyunsuk.core.api.outfit.outfitresponse.OutFitResponse;
@@ -43,3 +44,4 @@ public class OutFitService {
     }
 
 }
+*/

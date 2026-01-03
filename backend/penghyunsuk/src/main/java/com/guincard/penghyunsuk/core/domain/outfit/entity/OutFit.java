@@ -1,5 +1,6 @@
-package com.guincard.penghyunsuk.core.domain.outfit;
+package com.guincard.penghyunsuk.core.domain.outfit.entity;
 
+import com.guincard.penghyunsuk.core.domain.outfit.OutfitEnum;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -27,11 +28,11 @@ public class OutFit {
 
     @Column(nullable = false)
     @Comment("날씨 번호")
-    private Integer weatherNum;
+    private Integer weatherNum; //PTY
 
     @Column(nullable = false)
-    @Comment("체감 온도 평균")
-    private Double temperature;
+    @Comment("최고기온")
+    private Double temperature; //TMX
 
     @Column(nullable = false)
     @Comment("이미지 URL")
@@ -40,5 +41,9 @@ public class OutFit {
     @Column(nullable = false)
     @Comment("날씨 후기")
     private String outFitReview;
+
+    @Column(nullable = false)
+    @Comment("만족도")
+    private OutfitEnum outfit;
 
 }

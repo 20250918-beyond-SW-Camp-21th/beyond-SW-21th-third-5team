@@ -1,7 +1,8 @@
+/*
 package com.guincard.penghyunsuk.core.api.outfit;
 
 import com.guincard.penghyunsuk.core.api.outfit.outfitrequest.OutFitRequest;
-import com.guincard.penghyunsuk.core.domain.outfit.OutFitService;
+import com.guincard.penghyunsuk.core.domain.outfit.service.OutFitService;
 import com.guincard.penghyunsuk.core.support.response.ApiResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,3 +26,4 @@ public class OutFitController {
         return ApiResult.success();
     }
 }
+*/
