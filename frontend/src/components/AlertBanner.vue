@@ -5,7 +5,7 @@
         <AlertCircle class="w-6 h-6 text-white" />
       </div>
       <div>
-        <p class="text-[#1F2A37] font-medium">오늘 번개가 쳐요. 외출 시 우산 챙겨요!</p>
+        <p class="text-[#1F2A37] font-medium">{{ todayMessage }}</p>
       </div>
     </div>
   </div>
@@ -13,4 +13,12 @@
 
 <script setup lang="ts">
 import { AlertCircle } from 'lucide-vue-next';
+import {computed} from "vue";
+import {getWeatherMessage} from '../components/ui/weatherMessages';
+
+const props = defineProps<{
+  weatherType?: string;
+}>();
+
+const todayMessage = computed(() => getWeatherMessage(props.weatherType));
 </script>
