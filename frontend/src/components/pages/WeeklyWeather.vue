@@ -10,30 +10,21 @@
           <span class="text-[#6B7280]">{{ weekDateRange }}</span>
         </div>
 
-        <div class="flex gap-2 bg-[#F6FAFF] p-1 rounded-2xl">
-          <button
-              type="button"
-              class="px-6 py-2 rounded-xl transition-all"
-              :class="viewMode === 'list' ? 'bg-white text-[#1F2A37] font-semibold shadow-sm' : 'text-[#6B7280]'"
-              @click="viewMode = 'list'"
-          >
-            리스트 보기
-          </button>
-          <button
-              type="button"
-              class="px-6 py-2 rounded-xl transition-all"
-              :class="viewMode === 'graph' ? 'bg-white text-[#1F2A37] font-semibold shadow-sm' : 'text-[#6B7280]'"
-              @click="viewMode = 'graph'"
-          >
-            그래프 보기
-          </button>
-        </div>
       </div>
 
       <div class="flex gap-3">
-        <div class="bg-[#F0F8FF] px-4 py-2 rounded-2xl border border-[#E6EEF9]"><span class="text-sm text-[#1F2A37]">비 오는 날 2일</span></div>
-        <div class="bg-[#FFF5F8] px-4 py-2 rounded-2xl border border-[#FFE8F0]"><span class="text-sm text-[#1F2A37]">큰 일교차 3일</span></div>
-        <div class="bg-[#F6FAFF] px-4 py-2 rounded-2xl border border-[#E6EEF9]"><span class="text-sm text-[#1F2A37]">최저 -2°C</span></div>
+        <div class="bg-[#F0F8FF] px-4 py-2 rounded-2xl border border-[#E6EEF9]">
+          <span class="text-sm text-[#1F2A37]">비 오는 날 {{ summary.rainyDays }}일</span>
+        </div>
+        <div class="bg-[#FFF5F8] px-4 py-2 rounded-2xl border border-[#FFE8F0]">
+          <span class="text-sm text-[#1F2A37]">큰 일교차 {{ summary.diffDays }}일</span>
+        </div>
+        <div class="bg-[#F6FAFF] px-4 py-2 rounded-2xl border border-[#E6EEF9]">
+          <span class="text-sm text-[#1F2A37]">최저 {{ summary.minTemp }}°C</span>
+        </div>
+        <div class="bg-[#FFF9F0] px-4 py-2 rounded-2xl border border-[#FFE8C8]">
+          <span class="text-sm text-[#1F2A37]">최고 {{ summary.maxTemp }}°C</span>
+        </div>
       </div>
     </div>
 
@@ -83,42 +74,10 @@
             <span class="text-[#1F2A37]">{{ day.outfit }}</span>
           </div>
 
-          <div class="w-12 h-12 bg-gradient-to-br from-[#FFF5F8] to-[#FFE8F0] rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-            <img :src="mascotSrc" alt="마스코트" class="w-8 h-8 object-contain" />
-          </div>
         </div>
       </div>
     </div>
 
-    <div class="mb-8">
-      <h3 class="text-[#1F2A37] mb-4">일주일 옷차림 요약</h3>
-      <div class="grid grid-cols-3 gap-6">
-        <div class="bg-gradient-to-br from-[#F0F8FF] to-[#E6F3FF] rounded-3xl p-6 shadow-lg shadow-blue-100/30">
-          <div class="text-4xl mb-3">🧥</div>
-          <h4 class="text-[#1F2A37] mb-2">가디건 / 자켓</h4>
-          <p class="text-[#6B7280]">3일</p>
-        </div>
-
-        <div class="bg-gradient-to-br from-[#FFF5F8] to-[#FFE8F0] rounded-3xl p-6 shadow-lg shadow-pink-100/30">
-          <div class="text-4xl mb-3">🧥</div>
-          <h4 class="text-[#1F2A37] mb-2">코트 / 패딩</h4>
-          <p class="text-[#6B7280]">2일</p>
-        </div>
-
-        <div class="bg-gradient-to-br from-[#F6FAFF] to-[#EAF2FF] rounded-3xl p-6 shadow-lg shadow-blue-100/30">
-          <div class="text-4xl mb-3">☔</div>
-          <h4 class="text-[#1F2A37] mb-2">우산 필요한 날</h4>
-          <p class="text-[#6B7280]">2일</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-[28px] p-8 shadow-lg shadow-blue-100/50">
-      <h3 class="text-[#1F2A37] mb-6">온도 변화 그래프 (미리보기)</h3>
-      <div class="h-48 bg-gradient-to-br from-[#F6FAFF] to-[#EAF2FF] rounded-3xl flex items-center justify-center">
-        <p class="text-[#6B7280]">그래프 보기 모드에서 확인하세요</p>
-      </div>
-    </div>
   </main>
 </template>
 
@@ -126,7 +85,6 @@
 import { onMounted, ref, computed } from 'vue';
 import { ChevronDown, Cloud, CloudRain, Sun, Zap, Umbrella } from 'lucide-vue-next';
 
-const viewMode = ref<'list' | 'graph'>('list');
 const isLoading = ref(false);
 const weatherError = ref<string | null>(null);
 
@@ -142,6 +100,13 @@ const weekDateRange = computed(() => {
   };
 
   return `${format(start)}–${format(end)}`;
+});
+
+const summary = ref({
+  rainyDays: 0,
+  diffDays: 0,
+  minTemp: 0,
+  maxTemp: 0
 });
 
 // Default mock data structure (used as fallback or initial state)
@@ -282,7 +247,7 @@ function processWeeklyData(items: WeatherItem[]) {
   });
 
   const dates = Array.from(grouped.keys()).sort();
-  const newWeeklyData = []; // 새 데이터를 담을 배열
+  const newWeeklyData: any[] = []; // 새 데이터를 담을 배열
 
   dates.forEach((dateStr, index) => {
     if (index >= 7) return;
@@ -314,6 +279,43 @@ function processWeeklyData(items: WeatherItem[]) {
   });
 
   weeklyData.value = newWeeklyData;
+  calculateSummary(newWeeklyData, grouped);
+}
+
+function calculateSummary(data: any[], groupedData: Map<string, WeatherItem[]>) {
+  let rainy = 0;
+  let diff = 0;
+  let min = 100;
+  let max = -100;
+
+  data.forEach(day => {
+    // Rainy: Check icon 'rain' (PTY 1, 4) or 'snow' (PTY 2, 3)
+    // User requested criteria: PTY 1, 2, 4 -> Rain/Snow/Shower
+    // My determineIcon maps PTY 1, 4 -> 'rain' and PTY 2, 3 -> 'snow'
+    if (day.icon === 'rain' || day.icon === 'snow') {
+      rainy++;
+    }
+
+    // Large Temp Difference: >= 10 degrees
+    if ((day.high - day.low) >= 10) {
+      diff++;
+    }
+
+    if (day.low < min) min = day.low;
+    if (day.high > max) max = day.high;
+  });
+
+  if (data.length === 0) {
+    min = 0;
+    max = 0;
+  }
+
+  summary.value = {
+    rainyDays: rainy,
+    diffDays: diff,
+    minTemp: min,
+    maxTemp: max
+  };
 }
 
 onMounted(() => {
