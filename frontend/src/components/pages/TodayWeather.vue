@@ -4,15 +4,15 @@
     <div class="grid grid-cols-2 gap-6 mb-8">
       <HeroCard :hero-video-src="heroVideoSrc" :weather-type="weatherType" />
       <WeatherSummaryCard
-        :location-label="locationDisplay"
-        :date-label="dateLabel"
-        :status-message="statusMessage"
-        :temperature-display="temperatureDisplay"
-        :weather-summary="weatherSummary"
-        :weather-stats="weatherStats"
-        :outfit-items="outfitItems"
-        :outfit-description="outfitDescription"
-        @record="goToCalendar"
+          :location-label="locationDisplay"
+          :date-label="dateLabel"
+          :status-message="statusMessage"
+          :temperature-display="temperatureDisplay"
+          :weather-summary="weatherSummary"
+          :weather-stats="weatherStats"
+          :outfit-items="outfitItems"
+          :outfit-description="outfitDescription"
+          @record="goToCalendar"
       />
     </div>
 
@@ -28,7 +28,7 @@
     <!-- 각 페이지 미리보기 카드   -->
     <div class="grid grid-cols-3 gap-6">
       <PreviewCard type="tomorrow" :content="tomorrowPreview" />
-      <PreviewCard type="week" :content="weekPreview" />
+      <PreviewCard type="week" />
       <PreviewCard type="map" :content="mapPreview" />
     </div>
   </main>
@@ -102,7 +102,6 @@ const closestForecast = computed(() => getClosestForecast(weatherItems.value ?? 
 /*현재 날씨 타입 계산(sunny/cloud/rain/snow/thunder)*/
 const weatherType = computed(() => mapWeatherKey());
 const tomorrowPreview = computed(() => buildTomorrowPreview(weatherItems.value ?? []));
-const weekPreview = computed(() => buildWeekPreview(weatherItems.value ?? []));
 const mapPreview = computed<MapPreview>(() => {
   const fallbackOrder = ['서울', '대전', '부산'];
   const temps = fallbackOrder.map((name) => {
@@ -136,7 +135,7 @@ const dateLabel = computed(() => formatKoreanDate(new Date()));
 
 const temperatureDisplay = computed(() => {
   const value = findValue(['TMP', 'T1H']);
-  return value ? `${value}C` : "--C";
+  return value ? `${value}°C` : "--°C";
 });
 
 const weatherSummary = computed(() => {
@@ -168,7 +167,7 @@ const statusMessage = computed(() => {
     return "현재 위치의 날씨를 불러오는 중입니다.";
   }
   if (weatherItems.value?.length) {
-    return "현재 위치 날씨 수신 (" + weatherItems.value.length + "개)";
+    return "현재 위치의 날씨를 불러왔어✨";
   }
   return "";
 });
@@ -208,7 +207,7 @@ const outfitRecommendation = computed(() => {
     items = [
       { icon: Shirt, label: "가디건" },
       { icon: Coffee, label: "따뜻한 음료" },
-        { icon: ThermometerSnowflake, label: "보온용품" },
+      { icon: ThermometerSnowflake, label: "보온용품" },
     ];
   } else if (tempC >= 5) {
     description = "코트, 니트, 기모";
@@ -339,11 +338,11 @@ function findValue(categories: string[]) {
   const target = closestForecast.value;
   if (target) {
     const match = items.find(
-      (item) =>
-        item &&
-        categories.includes(item.category ?? "") &&
-        item.fcstDate === target.fcstDate &&
-        item.fcstTime === target.fcstTime,
+        (item) =>
+            item &&
+            categories.includes(item.category ?? "") &&
+            item.fcstDate === target.fcstDate &&
+            item.fcstTime === target.fcstTime,
     );
     if (match?.fcstValue) {
       return match.fcstValue;
@@ -455,9 +454,9 @@ function buildTomorrowPreview(items: WeatherItem[]): TomorrowPreview | null {
   }
 
   const temps = tomorrowItems
-    .filter((item) => item.category === "TMP" || item.category === "T1H")
-    .map((item) => parseNumber(item.fcstValue))
-    .filter((value): value is number => value !== null);
+      .filter((item) => item.category === "TMP" || item.category === "T1H")
+      .map((item) => parseNumber(item.fcstValue))
+      .filter((value): value is number => value !== null);
 
   const maxTemp = temps.length ? Math.max(...temps) : null;
   const minTemp = temps.length ? Math.min(...temps) : null;
@@ -472,16 +471,16 @@ function buildTomorrowPreview(items: WeatherItem[]): TomorrowPreview | null {
   return {
     title: "내일 날씨",
     subtitle: formatMonthDay(tomorrow),
-    highlight: `${summaryLabel} ${maxDisplay}C/${minDisplay}C`,
-    description: `최고 ${maxDisplay}C · 최저 ${minDisplay}C`,
+    highlight: `${summaryLabel} ${maxDisplay}°C/${minDisplay}°C`,
+    description: `최고 ${maxDisplay}°C · 최저 ${minDisplay}°C`,
   };
 }
 
 /* 프리뷰 기준 시간 정함(날씨 종류 결정)*/
 function pickSummaryTime(items: WeatherItem[]) {
   const times = items
-    .map((item) => item.fcstTime)
-    .filter((time): time is string => !!time);
+      .map((item) => item.fcstTime)
+      .filter((time): time is string => !!time);
 
   if (!times.length) {
     return null;
@@ -490,68 +489,6 @@ function pickSummaryTime(items: WeatherItem[]) {
     return "1200";
   }
   return times.sort()[0];
-}
-
-function buildWeekPreview(items: WeatherItem[]): TomorrowPreview | null {
-  if (!items.length) {
-    return null;
-  }
-
-  const start = new Date();
-  const end = new Date();
-  end.setDate(start.getDate() + 6);
-
-  const dateKeys: string[] = [];
-  const cursor = new Date(start);
-  while (cursor <= end) {
-    dateKeys.push(formatDateKey(cursor));
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  const weekItems = items.filter((item) => item && item.fcstDate && dateKeys.includes(item.fcstDate));
-  if (!weekItems.length) {
-    return null;
-  }
-
-  let rainyDays = 0;
-  let largeRangeDays = 0;
-
-  for (const key of dateKeys) {
-    const dayItems = weekItems.filter((item) => item.fcstDate === key);
-    if (!dayItems.length) {
-      continue;
-    }
-
-    const hasRain = dayItems.some((item) => {
-      if (item.category !== "PTY") {
-        return false;
-      }
-      const code = parseNumber(item.fcstValue);
-      return code !== null && code > 0;
-    });
-    if (hasRain) {
-      rainyDays += 1;
-    }
-
-    const temps = dayItems
-      .filter((item) => item.category === "TMP" || item.category === "T1H")
-      .map((item) => parseNumber(item.fcstValue))
-      .filter((value): value is number => value !== null);
-    if (temps.length) {
-      const maxTemp = Math.max(...temps);
-      const minTemp = Math.min(...temps);
-      if (maxTemp - minTemp >= 10) {
-        largeRangeDays += 1;
-      }
-    }
-  }
-
-  return {
-    title: "이번 주 날씨",
-    subtitle: `${formatMonthDay(start)}~${formatMonthDay(end)}`,
-    highlight: `비오는 날 ${rainyDays}일`,
-    description: `일교차 큰 날 ${largeRangeDays}일`,
-  };
 }
 
 /* 시간대별 온도 데이터 (최대 8개)*/
@@ -581,23 +518,23 @@ function buildHourlyItems(items: WeatherItem[]) {
 
   const now = new Date();
   const rows = Array.from(byKey.values())
-    .map((item) => ({
-      item,
-      key: `${item.fcstDate}${item.fcstTime}`,
-      dateTime: parseForecastDateTime(item.fcstDate, item.fcstTime),
-    }))
-    .sort((a, b) => {
-      if (a.dateTime && b.dateTime) {
-        return a.dateTime.getTime() - b.dateTime.getTime();
-      }
-      if (a.dateTime) {
-        return -1;
-      }
-      if (b.dateTime) {
-        return 1;
-      }
-      return a.key.localeCompare(b.key);
-    });
+      .map((item) => ({
+        item,
+        key: `${item.fcstDate}${item.fcstTime}`,
+        dateTime: parseForecastDateTime(item.fcstDate, item.fcstTime),
+      }))
+      .sort((a, b) => {
+        if (a.dateTime && b.dateTime) {
+          return a.dateTime.getTime() - b.dateTime.getTime();
+        }
+        if (a.dateTime) {
+          return -1;
+        }
+        if (b.dateTime) {
+          return 1;
+        }
+        return a.key.localeCompare(b.key);
+      });
 
   const future = rows.filter((entry) => entry.dateTime && entry.dateTime >= now);
   const past = rows.filter((entry) => entry.dateTime && entry.dateTime < now).reverse();
@@ -605,9 +542,9 @@ function buildHourlyItems(items: WeatherItem[]) {
 
   return ordered.map(({ item }) => {
     const rawPrecipitation =
-      findValueForTime(items, ['RN1'], item.fcstDate!, item.fcstTime!) ??
-      findValueForTime(items, ['PCP'], item.fcstDate!, item.fcstTime!) ??
-      '--';
+        findValueForTime(items, ['RN1'], item.fcstDate!, item.fcstTime!) ??
+        findValueForTime(items, ['PCP'], item.fcstDate!, item.fcstTime!) ??
+        '--';
     const precipitation = normalizePrecipitation(rawPrecipitation);
 
     return {
