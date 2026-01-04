@@ -28,7 +28,7 @@
     <!-- 각 페이지 미리보기 카드   -->
     <div class="grid grid-cols-3 gap-6">
       <PreviewCard type="tomorrow" :content="tomorrowPreview" />
-      <PreviewCard type="week" />
+      <PreviewCard type="week" :content="weekPreview" />
       <PreviewCard type="map" :content="mapPreview" />
     </div>
   </main>
@@ -102,6 +102,7 @@ const closestForecast = computed(() => getClosestForecast(weatherItems.value ?? 
 /*현재 날씨 타입 계산(sunny/cloud/rain/snow/thunder)*/
 const weatherType = computed(() => mapWeatherKey());
 const tomorrowPreview = computed(() => buildTomorrowPreview(weatherItems.value ?? []));
+const weekPreview = computed(() => buildWeekPreview(weatherItems.value ?? []));
 const mapPreview = computed<MapPreview>(() => {
   const fallbackOrder = ['서울', '대전', '부산'];
   const temps = fallbackOrder.map((name) => {
@@ -489,6 +490,68 @@ function pickSummaryTime(items: WeatherItem[]) {
     return "1200";
   }
   return times.sort()[0];
+}
+
+function buildWeekPreview(items: WeatherItem[]): TomorrowPreview | null {
+  if (!items.length) {
+    return null;
+  }
+
+  const start = new Date();
+  const end = new Date();
+  end.setDate(start.getDate() + 6);
+
+  const dateKeys: string[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    dateKeys.push(formatDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  const weekItems = items.filter((item) => item && item.fcstDate && dateKeys.includes(item.fcstDate));
+  if (!weekItems.length) {
+    return null;
+  }
+
+  let rainyDays = 0;
+  let largeRangeDays = 0;
+
+  for (const key of dateKeys) {
+    const dayItems = weekItems.filter((item) => item.fcstDate === key);
+    if (!dayItems.length) {
+      continue;
+    }
+
+    const hasRain = dayItems.some((item) => {
+      if (item.category !== "PTY") {
+        return false;
+      }
+      const code = parseNumber(item.fcstValue);
+      return code !== null && code > 0;
+    });
+    if (hasRain) {
+      rainyDays += 1;
+    }
+
+    const temps = dayItems
+      .filter((item) => item.category === "TMP" || item.category === "T1H")
+      .map((item) => parseNumber(item.fcstValue))
+      .filter((value): value is number => value !== null);
+    if (temps.length) {
+      const maxTemp = Math.max(...temps);
+      const minTemp = Math.min(...temps);
+      if (maxTemp - minTemp >= 10) {
+        largeRangeDays += 1;
+      }
+    }
+  }
+
+  return {
+    title: "이번 주 날씨",
+    subtitle: `${formatMonthDay(start)}~${formatMonthDay(end)}`,
+    highlight: `비오는 날 ${rainyDays}일`,
+    description: `일교차 큰 날 ${largeRangeDays}일`,
+  };
 }
 
 /* 시간대별 온도 데이터 (최대 8개)*/
