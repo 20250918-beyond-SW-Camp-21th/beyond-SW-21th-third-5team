@@ -61,7 +61,7 @@
 import { Search } from "lucide-vue-next";
 import { computed } from "vue";
 
-const tabs = ["오늘의 날씨", "이번주 날씨", "국내 기온지도", "OOTD"] as const;
+const tabs = ["오늘의 날씨", "이번주 날씨", "국내 기온지도", "달력 기록"] as const;
 type Tab = (typeof tabs)[number];
 type AuthTab = "로그인" | "로그아웃";
 type PageKey = Tab | AuthTab;
