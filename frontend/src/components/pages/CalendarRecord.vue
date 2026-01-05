@@ -7,21 +7,30 @@
           <h3 class="text-[#1F2A37] text-lg font-semibold">내 기록</h3>
         </div>
 
-        <div v-if="records.length === 0" class="text-[#9CA3AF]">
+        <div v-if="listLoading" class="text-[#9CA3AF]">
+          불러오는 중...
+        </div>
+
+        <div v-else-if="listError" class="text-[#ef4444] font-semibold">
+          {{ listError }}
+        </div>
+
+        <div v-else-if="records.length === 0" class="text-[#9CA3AF]">
           아직 등록한 기록이 없습니다.
         </div>
+
         <div v-else>
           <div class="recordGrid">
             <button
-                v-for="r in pageItems"
+                v-for="r in records"
                 :key="r.id"
                 type="button"
                 class="recordCard"
-                @click="openDetailModal(r)"
+                @click="openDetailModalById(r.id)"
             >
               <img
-                  v-if="r.photoUrl"
-                  :src="r.photoUrl"
+                  v-if="r.imageUrl"
+                  :src="r.imageUrl"
                   class="recordImage"
                   alt="ootd"
               />
@@ -33,8 +42,8 @@
             <button
                 type="button"
                 class="pageBtn"
-                :disabled="page === 1"
-                @click="page--"
+                :disabled="!hasPrev"
+                @click="prevPage"
             >
               이전
             </button>
@@ -42,16 +51,13 @@
             <button
                 type="button"
                 class="pageBtn"
-                :disabled="page === totalPages"
-                @click="page++"
+                :disabled="!hasNext"
+                @click="nextPage"
             >
               다음
             </button>
           </div>
         </div>
-
-
-
       </section>
 
       <div class="bg-white rounded-[28px] p-8 shadow-lg shadow-blue-100/50">
@@ -130,9 +136,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import {computed, onMounted, ref} from 'vue';
 import ReviewModal from "../ootd/ReviewModal.vue";
 import TodayWeather from "../pages/TodayWeather.vue";
+import { useRouter } from "vue-router";
+import { outfitApi } from "@/api/outfit/outfit"
+
+const router = useRouter();
 
 const today = new Date().toLocaleDateString('ko-KR', {
   year: 'numeric',
@@ -149,31 +159,67 @@ const isReviewModalOpen = ref(false)
 const openReviewModal = () => (isReviewModalOpen.value = true)
 const closeReviewModal = () => (isReviewModalOpen.value = false)
 
-const page = ref(1)
+const page = ref(0)
 const pageSize = 16 //
 
-const total = computed(() => records.value.length)
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
+const listLoading = ref(false)
+const listError = ref("")
 
-const startIndex = computed(() => (page.value - 1) * pageSize)
-const endIndex = computed(() => Math.min(total.value, startIndex.value + pageSize))
+// 서버에서 내려주는 목록(items)
+const records = (
+    Array.from({ length: 16 }, (_, i) => ({
+      id: i + 1,
+      // Picsum 무료 이미지 서비스 사용 (랜덤 이미지)
+      imageUrl: `https://picsum.photos/300/300?random=${i}`,
+    }))
+    );
 
-const pageItems = computed(() =>
-    records.value.slice(startIndex.value, endIndex.value)
-)
 
-const pagesToShow = computed(() => {
-  const maxButtons = 5
-  const tp = totalPages.value
-  const cur = page.value
+    // ref<Array<{ id: number; imageUrl: string | null }>>([])
 
-  let start = Math.max(1, cur - Math.floor(maxButtons / 2))
-  let end = Math.min(tp, start + maxButtons - 1)
-  start = Math.max(1, end - maxButtons + 1)
+// 이전/다음 활성 여부
+const hasPrev = ref(false)
+const hasNext = ref(false)
 
-  const arr = []
-  for (let p = start; p <= end; p++) arr.push(p)
-  return arr
+// 목록 로딩
+const loadList = async () => {
+  listLoading.value = true
+  listError.value = ""
+  try {
+    const res = await outfitApi.getOutfits(page.value, pageSize)
+
+    const data = res.data
+
+    records.value = data.items ?? []
+    hasPrev.value = !!data.hasPrev
+    hasNext.value = !!data.hasNext
+
+    if (typeof data.page === "number") page.value = data.page
+  } catch (e: any) {
+    console.error(e)
+    listError.value = e?.response?.data?.message || "목록 조회에 실패했습니다."
+    records.value = []
+    hasPrev.value = false
+    hasNext.value = false
+  } finally {
+    listLoading.value = false
+  }
+}
+
+const prevPage = async () => {
+  if (!hasPrev.value) return
+  page.value -= 1
+  await loadList()
+}
+
+const nextPage = async () => {
+  if (!hasNext.value) return
+  page.value += 1
+  await loadList()
+}
+
+onMounted(() => {
+  loadList()
 })
 
 /** 이동 */
@@ -195,52 +241,25 @@ const feelingLabel = (v) => {
   return v
 }
 
-const records = ref([
-  { id: 1, photoUrl: 'https://picsum.photos/300/300?random=1' },
-  { id: 2, photoUrl: 'https://picsum.photos/300/300?random=2' },
-  { id: 3, photoUrl: 'https://picsum.photos/300/300?random=3' },
-  { id: 4, photoUrl: 'https://picsum.photos/300/300?random=4' },
-
-  { id: 5, photoUrl: 'https://picsum.photos/300/300?random=5' },
-  { id: 6, photoUrl: 'https://picsum.photos/300/300?random=6' },
-  { id: 7, photoUrl: 'https://picsum.photos/300/300?random=7' },
-  { id: 8, photoUrl: 'https://picsum.photos/300/300?random=8' },
-
-  { id: 9, photoUrl: 'https://picsum.photos/300/300?random=9' },
-  { id: 10, photoUrl: 'https://picsum.photos/300/300?random=10' },
-  { id: 11, photoUrl: 'https://picsum.photos/300/300?random=11' },
-  { id: 12, photoUrl: 'https://picsum.photos/300/300?random=12' },
-
-  { id: 13, photoUrl: 'https://picsum.photos/300/300?random=13' },
-  { id: 14, photoUrl: 'https://picsum.photos/300/300?random=14' },
-  { id: 15, photoUrl: 'https://picsum.photos/300/300?random=15' },
-  { id: 16, photoUrl: 'https://picsum.photos/300/300?random=16' }
-])
-
-import OotdDetailModal from '../ootd/OotdDetailModal.vue'
-
 const isDetailModalOpen = ref(false)
-const selectedDetail = ref({
-  id: 0,
-  photoUrl: null as string | null,
-  date: '',
-  feeling: 'GOOD' as 'COLD' | 'GOOD' | 'HOT',
-  review: '',
-})
+const selectedDetail = ref<any>(null)
 
-const openDetailModal = (record: { id: number; photoUrl: string }) => {
-  // 지금은 API 없이 예시 데이터로 채움 (나중에 DB 조회로 교체)
-  selectedDetail.value = {
-    id: record.id,
-    photoUrl: record.photoUrl,
-    date: '2026-01-02',
-    feeling: 'GOOD',
-    review: '이 날은 체감이 딱 좋아서 만족했습니다.',
+const openDetailModalById = async (id: number) => {
+  try {
+    // 단건 조회 호출
+    const res = await outfitApi.getMyOutfitDetail(id)
+    selectedDetail.value = res.data
+    isDetailModalOpen.value = true
+  } catch (e) {
+    console.error(e)
+    alert("상세 조회에 실패했습니다.")
   }
-  isDetailModalOpen.value = true
 }
 
 const closeDetailModal = () => (isDetailModalOpen.value = false)
+
+
+import OotdDetailModal from '../ootd/OotdDetailModal.vue'
 
 const todayPty = ref<number | null>(1)
 const todayTmx = ref<number | null>(1)

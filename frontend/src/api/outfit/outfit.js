@@ -2,19 +2,19 @@ import { http } from '../http'
 
 export const outfitApi = {
     getOutfits(page = 0, size = 16){
-        return http.get("/api/outfit", {
+        return http.get("/outfit", {
             params: { page, size }
         });
     },
 
     getMyOutfitDetail(id) {
-        return http.get(`/api/outfit/${id}`);
+        return http.get(`/outfit/${id}`);
     },
 
     saveOutfit(formData) {
-        return http.post("/api/outfit", formData, {
+        return http.post("/outfit", formData, {
             headers: {
-                "Content-Type": "multipart/form-data",
+                "Content-Type": "application/json",
             },
         });
     }

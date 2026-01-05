@@ -13,6 +13,8 @@ const routes = [
     { path: "/weekly", name: "weekly", component: WeeklyWeather },
     { path: "/temperature-map", name: "map", component: TemperatureMap },
     { path: "/calendar", name: "calendar", component: CalendarRecord, meta: { requiresAuth: true } },
+
+
 ];
 
 const router = createRouter({
