@@ -169,7 +169,6 @@ const listError = ref("")
 const records = (
     Array.from({ length: 16 }, (_, i) => ({
       id: i + 1,
-      // Picsum 무료 이미지 서비스 사용 (랜덤 이미지)
       imageUrl: `https://picsum.photos/300/300?random=${i}`,
     }))
     );
@@ -319,7 +318,7 @@ const onWeatherLoaded = (payload: { pty: number; tmx: number }) => {
 
 .recordGrid{
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* ✅ 4칸 고정 */
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   width: 100%;
 }
@@ -327,8 +326,7 @@ const onWeatherLoaded = (payload: { pty: number; tmx: number }) => {
 .recordCard{
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1; /* ✅ 정사각형 */
-  border-radius: 16px;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
   background: #f3f4f6;
   border: 1px solid #e5e7eb;
