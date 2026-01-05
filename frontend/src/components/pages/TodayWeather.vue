@@ -703,4 +703,23 @@ onMounted(() => {
 function goToCalendar() {
   router.push({ name: 'calendar' });
 }
+
+// 양승재 추가
+  const emit = defineEmits<{
+    (e: 'weather-loaded', payload: { pty: number; tmx: number }): void
+  }>()
+
+  const todayPTY = ref<number>(0)
+  const todayTmx = ref<number>(0)
+
+  onMounted(async () => {
+    // 실제로는 여기서 날씨 API 호출
+    todayPTY.value = 0
+    todayTmx.value = 6.0
+
+    emit('weather-loaded', {
+      pty: todayPTY.value,
+      tmx: todayTmx.value,
+    })
+  })
 </script>
