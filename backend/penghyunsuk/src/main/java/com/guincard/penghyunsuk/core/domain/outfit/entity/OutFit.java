@@ -13,14 +13,18 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "OutFit")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor
+@AllArgsConstructor
 public class OutFit {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Comment("사용자 ID")
     private Long id;
+
+    @Column(nullable = false)
+    @Comment("사용자")
+    private Long userId;
 
     @Column(nullable = false)
     @Comment("저장 날짜")
@@ -42,6 +46,7 @@ public class OutFit {
     @Comment("날씨 후기")
     private String outFitReview;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Comment("만족도")
     private OutfitEnum outfit;
