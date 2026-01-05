@@ -4,15 +4,15 @@
     <div class="grid grid-cols-2 gap-6 mb-8">
       <HeroCard :hero-video-src="heroVideoSrc" :weather-type="weatherType" />
       <WeatherSummaryCard
-        :location-label="locationDisplay"
-        :date-label="dateLabel"
-        :status-message="statusMessage"
-        :temperature-display="temperatureDisplay"
-        :weather-summary="weatherSummary"
-        :weather-stats="weatherStats"
-        :outfit-items="outfitItems"
-        :outfit-description="outfitDescription"
-        @record="goToCalendar"
+          :location-label="locationDisplay"
+          :date-label="dateLabel"
+          :status-message="statusMessage"
+          :temperature-display="temperatureDisplay"
+          :weather-summary="weatherSummary"
+          :weather-stats="weatherStats"
+          :outfit-items="outfitItems"
+          :outfit-description="outfitDescription"
+          @record="goToCalendar"
       />
     </div>
 
@@ -29,7 +29,7 @@
     <div class="grid grid-cols-3 gap-6">
       <PreviewCard type="tomorrow" :content="tomorrowPreview" />
       <PreviewCard type="week" />
-      <PreviewCard type="map" />
+      <PreviewCard type="map" :content="mapPreview" />
     </div>
   </main>
 </template>
@@ -80,6 +80,13 @@ type TomorrowPreview = {
   description: string;
 };
 
+type MapPreview = {
+  title: string;
+  subtitle: string;
+  highlight: string;
+  description: string;
+};
+
 /* 날씨 화면 상태 */
 const weatherItems = ref<WeatherItem[] | null>(null);
 const hourlyItems = ref<{ time: string; temperature: string; precipitation:string; summary?: string }[]>([]);
@@ -87,6 +94,7 @@ const weatherError = ref<string | null>(null);
 const isLoading = ref(false);
 const locationLabel = ref("현재 위치");
 const router = useRouter();
+const mapTemps = ref<Record<string, number | null>>({});
 
 /* 현재 시간에 가장 가까운 예보 시각 계산 */
 const closestForecast = computed(() => getClosestForecast(weatherItems.value ?? []));
@@ -94,6 +102,19 @@ const closestForecast = computed(() => getClosestForecast(weatherItems.value ?? 
 /*현재 날씨 타입 계산(sunny/cloud/rain/snow/thunder)*/
 const weatherType = computed(() => mapWeatherKey());
 const tomorrowPreview = computed(() => buildTomorrowPreview(weatherItems.value ?? []));
+const mapPreview = computed<MapPreview>(() => {
+  const fallbackOrder = ['서울', '대전', '부산'];
+  const temps = fallbackOrder.map((name) => {
+    const value = mapTemps.value[name];
+    return `${name} ${value ?? '--'}°C`;
+  });
+  return {
+    title: '국내 기온지도',
+    subtitle: '서울/대전/부산',
+    highlight: temps.join('  ·  '),
+    description: '',
+  };
+});
 
 /* 날씨타입+온도로 펭귄 영상 선택*/
 const heroVideoSrc = computed(() => {
@@ -114,7 +135,7 @@ const dateLabel = computed(() => formatKoreanDate(new Date()));
 
 const temperatureDisplay = computed(() => {
   const value = findValue(['TMP', 'T1H']);
-  return value ? `${value}C` : "--C";
+  return value ? `${value}°C` : "--°C";
 });
 
 const weatherSummary = computed(() => {
@@ -146,7 +167,7 @@ const statusMessage = computed(() => {
     return "현재 위치의 날씨를 불러오는 중입니다.";
   }
   if (weatherItems.value?.length) {
-    return "현재 위치 날씨 수신 (" + weatherItems.value.length + "개)";
+    return "현재 위치의 날씨를 불러왔어✨";
   }
   return "";
 });
@@ -186,7 +207,7 @@ const outfitRecommendation = computed(() => {
     items = [
       { icon: Shirt, label: "가디건" },
       { icon: Coffee, label: "따뜻한 음료" },
-        { icon: ThermometerSnowflake, label: "보온용품" },
+      { icon: ThermometerSnowflake, label: "보온용품" },
     ];
   } else if (tempC >= 5) {
     description = "코트, 니트, 기모";
@@ -257,6 +278,57 @@ async function loadWeatherByLocation() {
   }
 }
 
+async function loadMapPreviewTemps() {
+  const base = resolveBaseDateTime();
+  const cities = ['서울', '대전', '부산'];
+  for (const city of cities) {
+    try {
+      const payload = await fetchOneSido(city, base.baseDate, base.baseTime);
+      const temp = payload?.temperature ?? null;
+      mapTemps.value = { ...mapTemps.value, [city]: temp };
+    } catch {
+      mapTemps.value = { ...mapTemps.value, [city]: null };
+    }
+  }
+}
+
+async function fetchOneSido(sido: string, baseDate: string, baseTime: string) {
+  const { data } = await axios.get('/api/map/sido/one', {
+    params: { sido, baseDate, baseTime },
+  });
+  return unwrapSidoPayload(data);
+}
+
+function unwrapSidoPayload(data: any) {
+  const candidate = data && typeof data === 'object' && 'success' in data && 'data' in data ? data.data : data;
+  if (!candidate || typeof candidate !== 'object') return null;
+  return {
+    temperature: candidate.temperature ?? null,
+  };
+}
+
+function resolveBaseDateTime() {
+  const now = new Date(Date.now() - 30 * 60 * 1000);
+  const baseTimes = [2300, 2000, 1700, 1400, 1100, 800, 500, 200];
+  const hhmm = now.getHours() * 100 + now.getMinutes();
+  let picked = baseTimes.find((bt) => hhmm >= bt);
+
+  let date = new Date(now);
+  if (!picked) {
+    date.setDate(date.getDate() - 1);
+    picked = 2300;
+  }
+
+  const baseDate = [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('');
+
+  const baseTime = String(picked).padStart(4, '0');
+  return { baseDate, baseTime };
+}
+
 /* 특정 카테고리 값 찾기 */
 function findValue(categories: string[]) {
   const items = weatherItems.value ?? [];
@@ -266,11 +338,11 @@ function findValue(categories: string[]) {
   const target = closestForecast.value;
   if (target) {
     const match = items.find(
-      (item) =>
-        item &&
-        categories.includes(item.category ?? "") &&
-        item.fcstDate === target.fcstDate &&
-        item.fcstTime === target.fcstTime,
+        (item) =>
+            item &&
+            categories.includes(item.category ?? "") &&
+            item.fcstDate === target.fcstDate &&
+            item.fcstTime === target.fcstTime,
     );
     if (match?.fcstValue) {
       return match.fcstValue;
@@ -382,9 +454,9 @@ function buildTomorrowPreview(items: WeatherItem[]): TomorrowPreview | null {
   }
 
   const temps = tomorrowItems
-    .filter((item) => item.category === "TMP" || item.category === "T1H")
-    .map((item) => parseNumber(item.fcstValue))
-    .filter((value): value is number => value !== null);
+      .filter((item) => item.category === "TMP" || item.category === "T1H")
+      .map((item) => parseNumber(item.fcstValue))
+      .filter((value): value is number => value !== null);
 
   const maxTemp = temps.length ? Math.max(...temps) : null;
   const minTemp = temps.length ? Math.min(...temps) : null;
@@ -399,16 +471,16 @@ function buildTomorrowPreview(items: WeatherItem[]): TomorrowPreview | null {
   return {
     title: "내일 날씨",
     subtitle: formatMonthDay(tomorrow),
-    highlight: `${summaryLabel} ${maxDisplay}C/${minDisplay}C`,
-    description: `최고 ${maxDisplay}C · 최저 ${minDisplay}C`,
+    highlight: `${summaryLabel} ${maxDisplay}°C/${minDisplay}°C`,
+    description: `최고 ${maxDisplay}°C · 최저 ${minDisplay}°C`,
   };
 }
 
 /* 프리뷰 기준 시간 정함(날씨 종류 결정)*/
 function pickSummaryTime(items: WeatherItem[]) {
   const times = items
-    .map((item) => item.fcstTime)
-    .filter((time): time is string => !!time);
+      .map((item) => item.fcstTime)
+      .filter((time): time is string => !!time);
 
   if (!times.length) {
     return null;
@@ -446,23 +518,23 @@ function buildHourlyItems(items: WeatherItem[]) {
 
   const now = new Date();
   const rows = Array.from(byKey.values())
-    .map((item) => ({
-      item,
-      key: `${item.fcstDate}${item.fcstTime}`,
-      dateTime: parseForecastDateTime(item.fcstDate, item.fcstTime),
-    }))
-    .sort((a, b) => {
-      if (a.dateTime && b.dateTime) {
-        return a.dateTime.getTime() - b.dateTime.getTime();
-      }
-      if (a.dateTime) {
-        return -1;
-      }
-      if (b.dateTime) {
-        return 1;
-      }
-      return a.key.localeCompare(b.key);
-    });
+      .map((item) => ({
+        item,
+        key: `${item.fcstDate}${item.fcstTime}`,
+        dateTime: parseForecastDateTime(item.fcstDate, item.fcstTime),
+      }))
+      .sort((a, b) => {
+        if (a.dateTime && b.dateTime) {
+          return a.dateTime.getTime() - b.dateTime.getTime();
+        }
+        if (a.dateTime) {
+          return -1;
+        }
+        if (b.dateTime) {
+          return 1;
+        }
+        return a.key.localeCompare(b.key);
+      });
 
   const future = rows.filter((entry) => entry.dateTime && entry.dateTime >= now);
   const past = rows.filter((entry) => entry.dateTime && entry.dateTime < now).reverse();
@@ -470,9 +542,9 @@ function buildHourlyItems(items: WeatherItem[]) {
 
   return ordered.map(({ item }) => {
     const rawPrecipitation =
-      findValueForTime(items, ['RN1'], item.fcstDate!, item.fcstTime!) ??
-      findValueForTime(items, ['PCP'], item.fcstDate!, item.fcstTime!) ??
-      '--';
+        findValueForTime(items, ['RN1'], item.fcstDate!, item.fcstTime!) ??
+        findValueForTime(items, ['PCP'], item.fcstDate!, item.fcstTime!) ??
+        '--';
     const precipitation = normalizePrecipitation(rawPrecipitation);
 
     return {
@@ -625,6 +697,7 @@ function parseForecastDateTime(fcstDate?: string, fcstTime?: string) {
 
 onMounted(() => {
   void loadWeatherByLocation();
+  void loadMapPreviewTemps();
 });
 
 function goToCalendar() {
