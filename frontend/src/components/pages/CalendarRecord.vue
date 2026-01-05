@@ -165,11 +165,16 @@ const pageSize = 16 //
 const listLoading = ref(false)
 const listError = ref("")
 
-// 서버에서 내려주는 목록(items)
+interface RecordItem {
+  id: number;
+  imageUrl: string | null;
+  date: string;       // 추가: 날짜
+  satisfaction: 'COLD' | 'GOOD' | 'HOT'; // 추가: 만족도
+}
+
 const records = (
     Array.from({ length: 16 }, (_, i) => ({
       id: i + 1,
-      // Picsum 무료 이미지 서비스 사용 (랜덤 이미지)
       imageUrl: `https://picsum.photos/300/300?random=${i}`,
     }))
     );
@@ -177,11 +182,11 @@ const records = (
 
     // ref<Array<{ id: number; imageUrl: string | null }>>([])
 
-// 이전/다음 활성 여부
+
 const hasPrev = ref(false)
 const hasNext = ref(false)
 
-// 목록 로딩
+
 const loadList = async () => {
   listLoading.value = true
   listError.value = ""
@@ -222,12 +227,12 @@ onMounted(() => {
   loadList()
 })
 
-/** 이동 */
+
 const goDetail = (id) => {
   router.push({ name: 'ootd-detail', params: { id } })
 }
 
-/** util */
+
 const formatDate = (iso) => {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
@@ -319,7 +324,7 @@ const onWeatherLoaded = (payload: { pty: number; tmx: number }) => {
 
 .recordGrid{
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* ✅ 4칸 고정 */
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   width: 100%;
 }
@@ -327,8 +332,7 @@ const onWeatherLoaded = (payload: { pty: number; tmx: number }) => {
 .recordCard{
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1; /* ✅ 정사각형 */
-  border-radius: 16px;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
   background: #f3f4f6;
   border: 1px solid #e5e7eb;
