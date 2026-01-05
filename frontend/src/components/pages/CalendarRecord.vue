@@ -165,7 +165,13 @@ const pageSize = 16 //
 const listLoading = ref(false)
 const listError = ref("")
 
-// 서버에서 내려주는 목록(items)
+interface RecordItem {
+  id: number;
+  imageUrl: string | null;
+  date: string;       // 추가: 날짜
+  satisfaction: 'COLD' | 'GOOD' | 'HOT'; // 추가: 만족도
+}
+
 const records = (
     Array.from({ length: 16 }, (_, i) => ({
       id: i + 1,
@@ -176,11 +182,11 @@ const records = (
 
     // ref<Array<{ id: number; imageUrl: string | null }>>([])
 
-// 이전/다음 활성 여부
+
 const hasPrev = ref(false)
 const hasNext = ref(false)
 
-// 목록 로딩
+
 const loadList = async () => {
   listLoading.value = true
   listError.value = ""
@@ -221,12 +227,12 @@ onMounted(() => {
   loadList()
 })
 
-/** 이동 */
+
 const goDetail = (id) => {
   router.push({ name: 'ootd-detail', params: { id } })
 }
 
-/** util */
+
 const formatDate = (iso) => {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
